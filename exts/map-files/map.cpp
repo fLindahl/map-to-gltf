@@ -362,6 +362,8 @@ MAPFile::Result MAPFile::ParseFace(Face** ppFace_)
         return RESULT_FAIL;
     }
 
+    // TODO: Apply rotation?
+
     //
     // Read scale
     //
@@ -393,17 +395,17 @@ MAPFile::Result MAPFile::ParseFace(Face** ppFace_)
 
     pFace->texScale[1] = atof(this->token) / scale;
 
-    result = GetToken();
-
-    if (result != RESULT_SUCCEED)
-    {
-        std::cout << "Error reading face!" << std::endl;
-
-        delete pFace;
-        pFace = NULL;
-
-        return RESULT_FAIL;
-    }
+    //result = GetToken();
+    //
+    //if (result != RESULT_SUCCEED)
+    //{
+    //    std::cout << "Error reading face!" << std::endl;
+    //
+    //    delete pFace;
+    //    pFace = NULL;
+    //
+    //    return RESULT_FAIL;
+    //}
 
     *ppFace_ = pFace;
 
