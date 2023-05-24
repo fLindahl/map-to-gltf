@@ -54,9 +54,9 @@ MAPFile::Result MAPFile::ParseEntity(Entity** ppEntity_)
 
     while (true)
     {
+        SkipComments();
+
         char c = 0;
-
-
         c = fgetc(this->file);
         if (c == EOF)
         {
@@ -305,6 +305,13 @@ MAPFile::Result MAPFile::ParseFace(Face** ppFace_)
                 iWAD++;
             }
         }
+    }
+
+    if (!bFound)
+    {
+        // the texture was not found in any WAD.
+        // HACK: for now, just assume that the texture exists...
+        bFound = true;
     }
 
     if (!bFound)
@@ -769,34 +776,7 @@ bool MAPFile::Load(const char* pcFile_, Entity* pEntities_, Texture* pTextures_)
 
     while (true)
     {
-        // Skip comments
-        {
-            char buf[2];
-            while (true)
-            {
-                buf[0] = fgetc(this->file);
-                buf[1] = fgetc(this->file);
-                if (strncmp("//", buf, 2) == 0)
-                {
-                    while (true)
-                    {// seek new line
-                        char c = fgetc(this->file);
-                        if (c == '\n' || c == '\r')
-                        {
-                            break;
-                        }
-
-                    }
-                }
-                else
-                {
-                    // move back 2 characters, since we checked for comments previously and apparently 
-                    ungetc(buf[1], this->file);
-                    ungetc(buf[0], this->file);
-                    break;
-                }
-            }
-        }
+        SkipComments();
 
         Entity* pEntity = NULL;
         Result result = ParseEntity(&pEntity);
@@ -1084,4 +1064,55 @@ MAPFile::Result MAPFile::GetString()
     }
 
     return RESULT_SUCCEED;
+}
+
+MAPFile::Result MAPFile::SkipComments()
+{
+    // Skip comments
+    {
+        char buf[2];
+        while (true)
+        {
+            for (int i = 0; i < 2; i++)
+            {
+                buf[i] = fgetc(this->file);
+                if (buf[i] == EOF)
+                {
+                    if (feof(this->file))
+                        return RESULT_EOF;
+                    else
+                        return RESULT_FAIL;
+                }
+            }
+            
+            if (strncmp("//", buf, 2) == 0)
+            {
+                while (true)
+                {// seek new line
+                    char c = fgetc(this->file);
+                    if (c == EOF)
+                    {
+                        if (feof(this->file))
+                            return RESULT_EOF;
+                        else
+                            return RESULT_FAIL;
+                    }
+                    if (c == '\n' || c == '\r')
+                    {
+                        break;
+                    }
+
+                }
+            }
+            else
+            {
+                // move back 2 characters, since we checked for comments previously and apparently 
+                ungetc(buf[1], this->file);
+                ungetc(buf[0], this->file);
+                break;
+            }
+        }
+    }
+
+    return Result::RESULT_SUCCEED;
 }

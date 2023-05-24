@@ -49,6 +49,7 @@ private:
 
     Result GetToken();
     Result GetString();
+    Result SkipComments();
 
     Result ParseEntity(Entity** ppEntity_);
     Result ParseProperty(Property** ppProperty_);
