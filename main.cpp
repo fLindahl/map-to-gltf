@@ -1,8 +1,10 @@
+#include <stdint.h>
+#include <assert.h>
 #include <iostream>
 #include <filesystem>
+#include "flags.h"
 #include "exts/fx/gltf.h"
 #include "exts/map-files/map.h"
-#include "flags.h"
 
 void PrintHelp()
 {
@@ -14,8 +16,6 @@ void PrintHelp()
         "-o [file]\t Path to output file. If not specified, the file will be placed adjacent to the input file but with different extension.\n"
         << std::endl;
 }
-
-
 
 int main(int argc, char** argv)
 {
@@ -42,7 +42,7 @@ int main(int argc, char** argv)
     else
     {
         outputFilePath = inputFilePath;
-
+    
         if (args.get("glb", false))
             outputFilePath.replace_extension(".glb");
         else
@@ -51,7 +51,7 @@ int main(int argc, char** argv)
     
     std::cout << "Converting: " << inputFilePath << " to "
         << outputFilePath << "..." << std::endl;
-
+    
     MAPFile mapFile;
     Entity* entities = nullptr;
     Texture* textures = nullptr;

@@ -18,7 +18,6 @@
 
 // https://developer.valvesoftware.com/wiki/.map
 // https://quakewiki.org/wiki/Quake_Map_Format
-// file://C:\Users\fredrik\git\LiteEngine\bin\assets\egypt_crypt.map
 
 MAPFile::Result MAPFile::ParseEntity(Entity** ppEntity_)
 {
