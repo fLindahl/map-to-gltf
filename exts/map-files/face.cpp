@@ -231,8 +231,11 @@ std::vector<MapPoly> DerivePolys(std::vector<MapFace> const& faces)
 						pk->verts.push_back(v);
 					}
 				}
+				pk++;
 			}
+			pj++;
 		}
+		pi++;
 	}
 
 	return ret;

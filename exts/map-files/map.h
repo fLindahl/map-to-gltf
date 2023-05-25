@@ -53,7 +53,7 @@ private:
 
     std::vector<MapEntity>* mapEntities;
     std::vector<MapTexture>* mapTextures;
-    std::unordered_map<std::string, uint64_t> textureTable;
+    std::unordered_map<std::string, uint32_t> textureTable;
     std::vector<std::string> textureLibs;
 
 public:

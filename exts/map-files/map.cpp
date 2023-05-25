@@ -162,7 +162,7 @@ MAPFile::Result MAPFile::ParseFace(MapFace& face)
 
 	bool foundTexture = false;
 	
-	size_t textureId = -1;
+	uint32_t textureId = 0xFFFFFFFF;
 	auto id = this->textureTable.find(this->token);
 	if (id != this->textureTable.end())
 	{
@@ -184,7 +184,7 @@ MAPFile::Result MAPFile::ParseFace(MapFace& face)
 				if (stbi_info(fullRelPath.c_str(), &x, &y, &n))
 				{
 					MapTexture texture;
-					texture.id = this->mapTextures->size();
+					texture.id = static_cast<uint32_t>(this->mapTextures->size());
 					texture.width = x;
 					texture.height = y;
 					texture.name = this->token;

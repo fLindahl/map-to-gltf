@@ -16,6 +16,7 @@ void PrintHelp()
         "-o [file]\t Path to output file. If not specified, the file will be placed adjacent to the input file but with different extension.\n"
         "-unify\t Perform CSG union between all brushes of an entity. This reduces the amount of ouput meshes and polygons.\n"
         "-texroot [folder name]\t Specify a texture root folder relative to cwd (default: \"textures\")\n"
+        "-copyright [copyright notice]\t Specify a copyright notice that will be embeded in the exported file.\n"
         << std::endl;
 }
 
@@ -34,7 +35,7 @@ int main(int argc, char** argv)
         std::cerr << "No input file specified!" << std::endl;
         return 1;
     }
-
+    
     std::filesystem::path inputFilePath = allArgs.front();
     std::filesystem::path outputFilePath;
     
@@ -64,6 +65,26 @@ int main(int argc, char** argv)
     bool loaded = mapFile.Load(inputFilePathString.c_str(), entities, textures);
     if (loaded)
     {
+        using namespace fx;
+
+        gltf::Document doc;
+        doc.asset.generator = "map-to-gltf by Fredrik Lindahl";
+        doc.asset.copyright = args.get<std::string>("copyright", "");
+
+        {
+            gltf::Scene scene;
+            scene.name = "";
+            scene.nodes.push_back(0);
+            doc.scenes.push_back(std::move(scene));
+            doc.scene = 0;
+        }
+
+        for (auto const& entity : entities)
+        {
+            gltf::Node node;
+            entity.properties
+        }
+
         return 0;
     }
 

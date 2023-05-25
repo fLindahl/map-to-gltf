@@ -777,10 +777,11 @@ void MapPoly::SortVerticesCW()
 	for (int i = 0; i < this->verts.size(); i++)
 		center = center + this->verts[i].p;
 	
-	center = center / this->verts.size();
+	center = center / static_cast<double>(this->verts.size());
 	
 	// Sort vertices
-	for (int i = 0; i < this->verts.size() - 2; i++)
+	int numVertices = static_cast<int>(this->verts.size());
+	for (int i = 0; i < numVertices - 2; i++)
 	{
 		Vector3	a;
 		Plane	p;
@@ -792,7 +793,7 @@ void MapPoly::SortVerticesCW()
 
 		p.PointsToPlane(this->verts[i].p, center, center + plane.n);
 
-		for (int j = i + 1; j < this->verts.size(); j++)
+		for (int j = i + 1; j < numVertices; j++)
 		{
 			if (p.ClassifyPoint(this->verts[j].p) != Plane::eCP::BACK)
 			{
@@ -830,9 +831,9 @@ void MapPoly::SortVerticesCW()
 
 	if (plane.n.Dot(oldPlane.n) < 0)
 	{
-		int j = this->verts.size();
+		size_t j = this->verts.size();
 
-		for (int i = 0; i < j / 2; i++)
+		for (size_t i = 0; i < j / 2; i++)
 		{
 			Vertex v = this->verts[i];
 			this->verts[i] = this->verts[j - i - 1];
