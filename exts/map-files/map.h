@@ -14,6 +14,8 @@ const unsigned int MAX_TEXTURE_LENGTH = 16;
 
 #include <iostream>
 #include <fstream>
+#include <vector>
+#include <unordered_map>
 
 #include "math.h"
 #include "entity.h"
@@ -38,26 +40,26 @@ private:
 
     FILE* file;
 
-    int wadFiles;
-    void** wad;
-    uint32_t* wadSize;
-    Texture* textureList;
-
-    int entities;
-    int polygons;
-    int textures;
-
     Result GetToken();
     Result GetString();
     Result SkipComments();
 
-    Result ParseEntity(Entity** ppEntity_);
-    Result ParseProperty(Property** ppProperty_);
-    Result ParseBrush(Brush** ppBrush_);
-    Result ParseFace(Face** ppFace_);
+    Result ParseEntity(MapEntity& entity);
+    Result ParseProperty(MapProperty& prop);
+    Result ParseBrush(MapBrush& brush);
+    Result ParseFace(MapFace& face);
     Result ParseVector(Vector3& v_);
     Result ParsePlane(Plane& p_);
 
+    std::vector<MapEntity>* mapEntities;
+    std::vector<MapTexture>* mapTextures;
+    std::unordered_map<std::string, uint64_t> textureTable;
+    std::vector<std::string> textureLibs;
+
 public:
-    bool Load(const char* pcFile_, Entity* ppEntities_, Texture* pTexture_);
+
+    bool unify;
+    std::string textureRoot;
+
+    bool Load(const char* pcFile_, std::vector<MapEntity>& entities, std::vector<MapTexture>& textures);
 };

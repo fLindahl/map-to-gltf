@@ -178,12 +178,12 @@ public:
 		d = -n.Dot ( a );
 	}
 
-	double DistanceToPlane ( const Vector3 &v )
+	double DistanceToPlane ( const Vector3 &v ) const
 	{
 		return ( n.Dot ( v ) + d );
 	}
 
-	eCP ClassifyPoint ( const Vector3 &v )
+	eCP ClassifyPoint ( const Vector3 &v ) const
 	{
 		double Distance = DistanceToPlane ( v );
 
@@ -199,7 +199,7 @@ public:
 		return eCP::ONPLANE;
 	}
 
-	bool GetIntersection ( const Plane &a, const Plane &b, Vector3 &v )
+	bool GetIntersection ( const Plane &a, const Plane &b, Vector3 &v ) const
 	{
 		double	denom;
 
@@ -215,7 +215,7 @@ public:
 		return true;
 	}
 
-	bool GetIntersection ( const Vector3 &Start, const Vector3 &End, Vector3 &Intersection, double &Percentage )
+	bool GetIntersection ( const Vector3 &Start, const Vector3 &End, Vector3 &Intersection, double &Percentage ) const
 	{
 		Vector3	Direction = End - Start;
 		double	Num, Denom;

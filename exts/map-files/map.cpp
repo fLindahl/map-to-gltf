@@ -11,6 +11,16 @@
 #include <iostream>
 #include <fstream>
 #include <cmath>
+#include <filesystem>
+
+#define STBI_NO_PSD
+#define STBI_NO_TGA
+#define STBI_NO_GIF
+#define STBI_NO_HDR
+#define STBI_NO_PIC
+#define STBI_NO_PNM
+#define STB_IMAGE_IMPLEMENTATION
+#include "../stb/stbimage.h"
 
 #include "map.h"
 #include "WAD3.h"
@@ -19,1102 +29,828 @@
 // https://developer.valvesoftware.com/wiki/.map
 // https://quakewiki.org/wiki/Quake_Map_Format
 
-MAPFile::Result MAPFile::ParseEntity(Entity** ppEntity_)
+MAPFile::Result MAPFile::ParseEntity(MapEntity& entity)
 {
-    if (*ppEntity_ != NULL)
-    {
-        delete* ppEntity_;
-        *ppEntity_ = NULL;
-    }
+	std::vector<MapBrush> brushes;
+	brushes.reserve(128);
 
-    Brush* pBrushes = NULL;
+	Result result = GetToken();
 
-    Result result = GetToken();
+	if (result != RESULT_SUCCEED)
+		return result;
+	
+	if (strcmp("{", this->token) != 0)
+	{
+		std::cout << "Expected:\t{\nFound:\t" << this->token << std::endl;
+		return RESULT_FAIL;
+	}
 
-    if (result == RESULT_EOF)
-    {
-        return RESULT_EOF;
-    }
-    else if (result == RESULT_FAIL)
-    {
-        return RESULT_FAIL;
-    }
+	// Parse properties and brushes
+	while (true)
+	{
+		SkipComments();
 
-    if (strcmp("{", this->token) != 0)
-    {
-        std::cout << "Expected:\t{\nFound:\t" << this->token << std::endl;
+		char c = 0;
+		c = fgetc(this->file);
+		if (c == EOF)
+		{
+			std::cout << "File read error!" << std::endl;
+			return RESULT_FAIL;
+		}
 
-        return RESULT_FAIL;
-    }
+		fseek(this->file, -1, SEEK_CUR);
 
-    //
-    // Parse properties and brushes
-    //
-    Entity* pEntity = new Entity;
+		if (c == '"')
+		{ // Property
+			MapProperty prop;
 
-    while (true)
-    {
-        SkipComments();
+			result = ParseProperty(prop);
 
-        char c = 0;
-        c = fgetc(this->file);
-        if (c == EOF)
-        {
-            std::cout << "File read error!" << std::endl;
-            delete pEntity;
-            pEntity = NULL;
+			if (result != RESULT_SUCCEED)
+			{
+				std::cout << "Error parsing property!" << std::endl;
+				return RESULT_FAIL;
+			}
 
-            return RESULT_FAIL;
-        }
+			entity.properties.push_back(prop);
+		}
+		else if (c == '{')
+		{ // Brush
+			MapBrush brush;
 
-        fseek(this->file, -1, SEEK_CUR);
+			result = ParseBrush(brush);
 
-        if (c == '"')
-        { // Property
-            Property* pProperty = NULL;
+			if (result != RESULT_SUCCEED)
+			{
+				std::cout << "Error parsing brush!" << std::endl;
+				return RESULT_FAIL;
+			}
+			
+			brushes.push_back(brush);
+		}
+		else if (c == '}')
+		{ // End of entity
+			if (!brushes.empty())
+			{
+				if (this->unify)
+				{
+					std::vector<MapPoly> polygons = CSG::Union(brushes);
+					entity.polys.insert(entity.polys.end(), polygons.begin(), polygons.end());
+				}
+				else
+				{
+					// Do not perform CSG union (useful for debugging)
+					for (auto const& brush : brushes)
+					{
+						entity.polys.insert(entity.polys.end(), brush.polys.begin(), brush.polys.end());
+					}
+				}
+			}
+			break;
+		}
+		else
+		{ // Error
+			std::cout << "Expected:\t\", {, or }\nFound:\t" << c << std::endl;
+			return RESULT_FAIL;
+		}
+	}
 
-            result = ParseProperty(&pProperty);
+	// Read }
+	result = GetToken();
 
-            if (result != RESULT_SUCCEED)
-            {
-                std::cout << "Error parsing property!" << std::endl;
+	if (result != RESULT_SUCCEED)
+	{
+		std::cout << "Error reading entity!" << std::endl;
+		return RESULT_FAIL;
+	}
 
-                delete pEntity;
-                pEntity = NULL;
-
-                return RESULT_FAIL;
-            }
-
-            pEntity->AddProperty(pProperty);
-        }
-        else if (c == '{')
-        { // Brush
-            Brush* pBrush = NULL;
-
-            result = ParseBrush(&pBrush);
-
-            if (result != RESULT_SUCCEED)
-            {
-                std::cout << "Error parsing brush!" << std::endl;
-
-                delete pEntity;
-                pEntity = NULL;
-
-                return RESULT_FAIL;
-            }
-
-            if (pBrushes == NULL)
-            {
-                pBrushes = pBrush;
-            }
-            else
-            {
-                Brush* pTmpBrush = pBrushes;
-
-                while (!pTmpBrush->IsLast())
-                {
-                    pTmpBrush = pTmpBrush->GetNext();
-                }
-
-                pTmpBrush->SetNext(pBrush);
-            }
-        }
-        else if (c == '}')
-        { // End of entity
-
-            //
-            // Perform CSG union
-            //
-            if (pBrushes != NULL)
-            {
-                pEntity->AddPoly(pBrushes->MergeList());
-
-                delete pBrushes;
-
-                pBrushes = NULL;
-                this->polygons += pEntity->GetNumberOfPolys();
-            }
-            /* Do not perform CSG union (useful for debugging)
-                        if ( pBrushes != NULL )
-                        {
-                            Brush *pBrush = pBrushes;
-
-                            while ( pBrush != NULL )
-                            {
-                                Poly *pPoly = pBrush->GetPolys ( );
-
-                                if ( pPoly != NULL )
-                                {
-                                    pEntity->AddPoly ( pPoly->CopyList ( ) );
-                                }
-
-                                pBrush = pBrush->GetNext ( );
-                            }
-
-                            delete pBrushes;
-
-                            pBrushes = NULL;
-                            this->polygons += pEntity->GetNumberOfPolys ( );
-                        }
-            */
-            break;
-        }
-        else
-        { // Error
-            std::cout << "Expected:\t\", {, or }\nFound:\t" << c << std::endl;
-
-            delete pEntity;
-            pEntity = NULL;
-
-            return RESULT_FAIL;
-        }
-    }
-
-    //
-    // Read }
-    //
-    result = GetToken();
-
-    if (result != RESULT_SUCCEED)
-    {
-        std::cout << "Error reading entity!" << std::endl;
-
-        delete pEntity;
-        pEntity = NULL;
-
-        return RESULT_FAIL;
-    }
-
-    *ppEntity_ = pEntity;
-    return RESULT_SUCCEED;
+	return RESULT_SUCCEED;
 }
 
 
-MAPFile::Result MAPFile::ParseFace(Face** ppFace_)
+MAPFile::Result MAPFile::ParseFace(MapFace& face)
 {
-    //
-    // Set up
-    //
-    if (*ppFace_ != NULL)
-    {
-        delete* ppFace_;
-        *ppFace_ = NULL;
-    }
+	// Read plane definition
+	Result result;
+	Vector3 p[3];
 
-    Face* pFace = new Face;
+	for (int i = 0; i < 3; i++)
+	{
+		Vector3 v;
 
-    //
-    // Read plane definition
-    //
-    Result result;
-    Vector3 p[3];
+		result = ParseVector(v);
 
-    for (int i = 0; i < 3; i++)
-    {
-        Vector3 v;
+		if (result != RESULT_SUCCEED)
+		{
+			std::cout << "Error reading plane definition!" << std::endl;
+			return RESULT_FAIL;
+		}
 
-        result = ParseVector(v);
+		p[i] = v;
+	}
 
-        if (result != RESULT_SUCCEED)
-        {
-            std::cout << "Error reading plane definition!" << std::endl;
+	face.plane.PointsToPlane(p[0], p[1], p[2]);
+	
+	// Read texture name
+	result = GetToken();
 
-            delete pFace;
-            pFace = NULL;
+	if (result != RESULT_SUCCEED)
+	{
+		std::cout << "Error reading texture name!" << std::endl;
+		return RESULT_FAIL;
+	}
 
-            return RESULT_FAIL;
-        }
+	bool foundTexture = false;
+	
+	size_t textureId = -1;
+	auto id = this->textureTable.find(this->token);
+	if (id != this->textureTable.end())
+	{
+		textureId = id->second;
+		foundTexture = true;
+	}
+	else
+	{
+		// Try to find texture in any of the texture folders
+		
+		const char* supportedExts[3] = { ".png", ".jpg", ".bmp" };
 
-        p[i] = v;
-    }
+		for (size_t i = 0; i < sizeof(supportedExts) / sizeof(const char*); i++)
+		{
+			std::string fullRelPath = this->textureRoot + "/" + this->token + supportedExts[i];
+			if (std::filesystem::exists(fullRelPath))
+			{
+				int x,y,n;
+				if (stbi_info(fullRelPath.c_str(), &x, &y, &n))
+				{
+					MapTexture texture;
+					texture.id = this->mapTextures->size();
+					texture.width = x;
+					texture.height = y;
+					texture.name = this->token;
 
-    pFace->plane.PointsToPlane(p[0], p[1], p[2]);
+					this->textureTable[texture.name] = texture.id;
+					this->mapTextures->push_back(texture);
 
-    //
-    // Read texture name
-    //
-    result = GetToken();
+					textureId = texture.id;
+					foundTexture = true;
+					break;
+				}
+			}
+		}
+	}
 
-    if (result != RESULT_SUCCEED)
-    {
-        std::cout << "Error reading texture name!" << std::endl;
+	if (!foundTexture)
+	{
+		std::cout << "Unable to find texture " << this->token << "!" << std::endl;
+		return RESULT_FAIL;
+	}
 
-        delete pFace;
-        pFace = NULL;
+	face.textureId = textureId;
 
-        return RESULT_FAIL;
-    }
+	// Read texture axis
+	for (size_t i = 0; i < 2; i++)
+	{
+		Plane p;
+		result = ParsePlane(p);
 
-    Texture* pTexture = NULL;
-    int				iWAD = 0;
-    bool bFound = false;
-    Texture::eGT Result;
+		if (result != RESULT_SUCCEED)
+		{
+			std::cout << "Error reading texture axis! (Wrong .map version?)" << std::endl;
+			return RESULT_FAIL;
+		}
 
-    if (this->textureList == NULL)
-    {
-        this->textureList = new Texture;
+		face.texAxis[i] = p;
+	}
 
-        while ((!bFound) && (iWAD < this->wadFiles))
-        {
-            pTexture = this->textureList->GetTexture(this->token, this->wad[iWAD], this->wadSize[iWAD], Result);
+	// Read rotation
+	result = GetToken();
 
-            if (Result == Texture::eGT::GT_LOADED)
-            {
-                pTexture->uiID = (unsigned int)this->textures;
-                this->textures++;
+	if (result != RESULT_SUCCEED)
+	{
+		std::cout << "Error reading rotation!" << std::endl;
+		return RESULT_FAIL;
+	}
 
-                bFound = true;
-            }
-            else
-            {
-                iWAD++;
-            }
-        }
+	// No need to do anything with rotation since it's already 
+	// applied to the texture axis
 
-        this->textureList->SetNext(NULL);
+	// Read scale
+	result = GetToken();
 
-        delete this->textureList;
+	if (result != RESULT_SUCCEED)
+	{
+		std::cout << "Error reading U scale!" << std::endl;
+		return RESULT_FAIL;
+	}
 
-        this->textureList = pTexture;
-    }
-    else
-    {
-        while ((!bFound) && (iWAD < this->wadFiles))
-        {
-            pTexture = this->textureList->GetTexture(this->token, this->wad[iWAD], this->wadSize[iWAD], Result);
+	face.texScale[0] = atof(this->token) / scale;
 
-            if (Result == Texture::eGT::GT_LOADED)
-            {
-                //
-                // Texture had to be loaded from the WAD file
-                //
-                pTexture->uiID = (unsigned int)this->textures;
-                this->textures++;
+	result = GetToken();
 
-                bFound = true;
-            }
-            else if (Result == Texture::eGT::GT_FOUND)
-            {
-                //
-                // Texture was already in texture list
-                //
-                bFound = true;
-            }
-            else
-            {
-                iWAD++;
-            }
-        }
-    }
+	if (result != RESULT_SUCCEED)
+	{
+		std::cout << "Error reading V scale!" << std::endl;
+		return RESULT_FAIL;
+	}
 
-    if (!bFound)
-    {
-        // the texture was not found in any WAD.
-        // HACK: for now, just assume that the texture exists...
-        bFound = true;
-    }
+	face.texScale[1] = atof(this->token) / scale;
 
-    if (!bFound)
-    {
-        std::cout << "Unable to find texture " << this->token << "!" << std::endl;
-
-        delete pFace;
-        pFace = NULL;
-
-        return RESULT_FAIL;
-    }
-
-    pFace->pTexture = pTexture;
-
-    //
-    // Read texture axis
-    //
-    for (size_t i = 0; i < 2; i++)
-    {
-        Plane p;
-        result = ParsePlane(p);
-
-        if (result != RESULT_SUCCEED)
-        {
-            std::cout << "Error reading texture axis! (Wrong .map version?)" << std::endl;
-
-            delete pFace;
-            pFace = NULL;
-
-            return RESULT_FAIL;
-        }
-
-        pFace->texAxis[i] = p;
-    }
-
-    //
-    // Read rotation
-    //
-    result = GetToken();
-
-    if (result != RESULT_SUCCEED)
-    {
-        std::cout << "Error reading rotation!" << std::endl;
-
-        delete pFace;
-        pFace = NULL;
-
-        return RESULT_FAIL;
-    }
-
-    // TODO: Apply rotation?
-
-    //
-    // Read scale
-    //
-    result = GetToken();
-
-    if (result != RESULT_SUCCEED)
-    {
-        std::cout << "Error reading U scale!" << std::endl;
-
-        delete pFace;
-        pFace = NULL;
-
-        return RESULT_FAIL;
-    }
-
-    pFace->texScale[0] = atof(this->token) / scale;
-
-    result = GetToken();
-
-    if (result != RESULT_SUCCEED)
-    {
-        std::cout << "Error reading V scale!" << std::endl;
-
-        delete pFace;
-        pFace = NULL;
-
-        return RESULT_FAIL;
-    }
-
-    pFace->texScale[1] = atof(this->token) / scale;
-
-    //result = GetToken();
-    //
-    //if (result != RESULT_SUCCEED)
-    //{
-    //    std::cout << "Error reading face!" << std::endl;
-    //
-    //    delete pFace;
-    //    pFace = NULL;
-    //
-    //    return RESULT_FAIL;
-    //}
-
-    *ppFace_ = pFace;
-
-    return RESULT_SUCCEED;
+	return RESULT_SUCCEED;
 }
 
 
-MAPFile::Result MAPFile::ParseBrush(Brush** ppBrush_)
+MAPFile::Result MAPFile::ParseBrush(MapBrush& brush)
 {
-    //
-    // Set up
-    //
-    if (*ppBrush_ != NULL)
-    {
-        delete* ppBrush_;
-        *ppBrush_ = NULL;
-    }
+	// Read {
+	Result result = GetToken();
 
-    //
-    // Read {
-    //
-    Result result = GetToken();
+	if (result != RESULT_SUCCEED)
+	{
+		std::cout << "Error reading brush!" << std::endl;
+		return RESULT_FAIL;
+	}
 
-    if (result != RESULT_SUCCEED)
-    {
-        std::cout << "Error reading brush!" << std::endl;
+	if (strcmp("{", this->token))
+	{
+		std::cout << "Expected:\t{\nFound:\t" << this->token << std::endl;
+		return RESULT_FAIL;
+	}
 
-        return RESULT_FAIL;
-    }
+	// Parse brush
+	std::vector<MapFace> faces;
 
-    if (strcmp("{", this->token))
-    {
-        std::cout << "Expected:\t{\nFound:\t" << this->token << std::endl;
+	while (true)
+	{
+		char c = 0;
 
-        return RESULT_FAIL;
-    }
+		c = fgetc(this->file);
+		if (c == EOF)
+		{
+			std::cout << "Error reading brush!" << std::endl;
+			return RESULT_FAIL;
+		}
 
-    //
-    // Parse brush
-    //
-    Brush* pBrush = new Brush;
-    Face* pFaces = NULL;
-    unsigned int uiFaces = 0;
+		fseek(this->file, -1, SEEK_CUR);
 
+		if (c == '(')
+		{ // Face
+			MapFace face;
 
-    while (true)
-    {
-        char c = 0;
+			result = ParseFace(face);
 
-        c = fgetc(this->file);
-        if (c == EOF)
-        {
-            std::cout << "Error reading brush!" << std::endl;
+			if (result != RESULT_SUCCEED)
+			{
+				std::cout << "Error parsing face!" << std::endl;
+				return RESULT_FAIL;
+			}
 
-            delete pBrush;
-            pBrush = NULL;
+			faces.push_back(face);
+		}
+		else if (c == '}')
+		{ // End of brush
+			break;
+		}
+		else
+		{
+			std::cout << "Expected:\t( or }\nFound:\t" << c << std::endl;
+			return RESULT_FAIL;
+		}
+	}
 
-            if (pFaces)
-            {
-                delete pFaces;
-                pFaces = NULL;
-            }
+	result = GetToken();
 
-            return RESULT_FAIL;
-        }
+	if (result != RESULT_SUCCEED)
+	{
+		std::cout << "Error reading brush!" << std::endl;
+		return RESULT_FAIL;
+	}
 
-        fseek(this->file, -1, SEEK_CUR);
+	std::vector<MapPoly> polys = DerivePolys(faces);
 
-        if (c == '(')
-        { // Face
-            Face* pFace = NULL;
+	if (polys.size() != faces.size())
+	{
+		std::cout << "Error reading brush! Num polys was different from num faces!" << std::endl;
+		return RESULT_FAIL;
+	}
 
-            result = ParseFace(&pFace);
+	// Sort vertices and calculate texture coordinates for every polygon
+	for (size_t i = 0; i < polys.size(); i++)
+	{
+		MapPoly& poly = polys[i];
+		MapFace const& face = faces[i];
 
-            if (result != RESULT_SUCCEED)
-            {
-                std::cout << "Error parsing face!" << std::endl;
+		poly.plane = face.plane;
+		poly.textureId = face.textureId;
 
-                delete pBrush;
-                pBrush = NULL;
+		poly.SortVerticesCW();
 
-                if (pFaces)
-                {
-                    delete pFaces;
-                    pFaces = NULL;
-                }
+		poly.CalculateTextureCoordinates(
+			this->mapTextures->at(face.textureId).width,
+			this->mapTextures->at(face.textureId).height,
+			face.texAxis,
+			face.texScale
+		);
+	}
 
-                return RESULT_FAIL;
-            }
+	brush.polys.insert(brush.polys.end(), polys.begin(), polys.end());
+	brush.CalculateAABB();
 
-            if (pFaces == NULL)
-            {
-                pFaces = pFace;
-            }
-            else
-            {
-                pFaces->AddFace(pFace);
-            }
-
-            uiFaces++;
-        }
-        else if (c == '}')
-        { // End of brush
-            break;
-        }
-        else
-        {
-            std::cout << "Expected:\t( or }\nFound:\t" << c << std::endl;
-
-            delete pBrush;
-            pBrush = NULL;
-
-            if (pFaces)
-            {
-                delete pFaces;
-                pFaces = NULL;
-            }
-
-            return RESULT_FAIL;
-        }
-    }
-
-    result = GetToken();
-
-    if (result != RESULT_SUCCEED)
-    {
-        std::cout << "Error reading brush!" << std::endl;
-
-        delete pBrush;
-        pBrush = NULL;
-
-        return RESULT_FAIL;
-    }
-
-    Poly* pPolyList = pFaces->GetPolys();
-
-    //
-    // Sort vertices and calculate texture coordinates for every polygon
-    //
-    Poly* pi = pPolyList;
-    Face* pFace = pFaces;
-
-    for (unsigned int c = 0; c < uiFaces; c++)
-    {
-        pi->plane = pFace->plane;
-        pi->TextureID = pFace->pTexture->uiID;
-
-        pi->SortVerticesCW();
-
-        pi->CalculateTextureCoordinates(pFace->pTexture->GetWidth(),
-            pFace->pTexture->GetHeight(),
-            pFace->texAxis, pFace->texScale);
-
-        pFace = pFace->GetNext();
-        pi = pi->GetNext();
-    }
-
-    pBrush->AddPoly(pPolyList);
-    pBrush->CalculateAABB();
-
-    if (pFaces != NULL)
-    {
-        delete pFaces;
-        pFaces = NULL;
-    }
-
-    *ppBrush_ = pBrush;
-
-    return RESULT_SUCCEED;
+	return RESULT_SUCCEED;
 }
 
 
-MAPFile::Result MAPFile::ParseProperty(Property** ppProperty_)
+MAPFile::Result MAPFile::ParseProperty(MapProperty& prop)
 {
-    //
-    // Set up
-    //
-    if (*ppProperty_ != NULL)
-    {
-        delete* ppProperty_;
-        *ppProperty_ = NULL;
-    }
+	//
+	// Read name
+	//
+	Result result = GetString();
 
-    //
-    // Read name
-    //
-    Result result = GetString();
+	if (result != RESULT_SUCCEED)
+	{
+		std::cout << "Error reading property name!" << std::endl;
+		return RESULT_FAIL;
+	}
 
-    if (result != RESULT_SUCCEED)
-    {
-        std::cout << "Error reading property name!" << std::endl;
+	prop.name = this->token;
 
-        return RESULT_FAIL;
-    }
+	if (strcmp("mapversion", this->token) == 0)
+	{
+		// Read value
+		result = GetString();
 
-    Property* pProperty = new Property;
+		if (result != RESULT_SUCCEED)
+		{
+			std::cout << "Error reading value of property 'mapversion'!" << std::endl;
 
-    if (strcmp("mapversion", this->token) == 0)
-    {
-        //
-        // Read value
-        //
-        result = GetString();
+			return RESULT_FAIL;
+		}
 
-        if (result != RESULT_SUCCEED)
-        {
-            std::cout << "Error reading value of " << pProperty->GetName() << "!" << std::endl;
+		if (strcmp("220", this->token) != 0)
+		{
+			std::cout << "Wrong map version!" << std::endl;
+			return RESULT_FAIL;
+		}
 
-            delete pProperty;
-            pProperty = NULL;
+		prop.value = this->token;
 
-            return RESULT_FAIL;
-        }
+		return RESULT_SUCCEED;
+	}
 
-        if (strcmp("220", this->token) != 0)
-        {
-            std::cout << "Wrong map version!" << std::endl;
+	if (strcmp("wad", this->token) == 0)
+	{
+		prop.name = this->token;
 
-            delete pProperty;
-            return RESULT_FAIL;
-        }
+		// Read value
+		result = GetString();
 
-        delete pProperty;
-        *ppProperty_ = NULL;
+		if (result != RESULT_SUCCEED)
+		{
+			std::cout << "Error reading value of property 'wad'!" << std::endl;
+			return RESULT_FAIL;
+		}
 
-        return RESULT_SUCCEED;
-    }
+		prop.value = this->token;
+		memset(this->token, 0, MAX_TOKEN_LENGTH + 1);
 
-    if (strcmp("wad", this->token) == 0)
-    {
-        pProperty->SetName(this->token);
+		std::string_view const wads = prop.value;
+		int iToken = 0;
 
-        //
-        // Read value
-        //
-        result = GetString();
+		/* TODO:
+		for (int i = 0; i < strlen(pWAD) + 1; i++)
+		{
+			if ((pWAD[i] == ';') || (pWAD[i] == 0x00))
+			{
+				if (this->wad == NULL)
+				{
+					this->wad = new LPVOID[this->wadFiles + 1];
+					this->wadSize = new uint32_t[this->wadFiles + 1];
+				}
+				else
+				{
+					LPVOID* pOldWAD = new LPVOID[this->wadFiles];
+					memcpy(pOldWAD, this->wad, sizeof(LPVOID) * (this->wadFiles));
+					delete this->wad;
 
-        if (result != RESULT_SUCCEED)
-        {
-            std::cout << "Error reading value of " << pProperty->GetName() << "!" << std::endl;
+					this->wad = new LPVOID[this->wadFiles + 1];
+					memcpy(this->wad, pOldWAD, sizeof(LPVOID) * (this->wadFiles));
 
-            delete pProperty;
-            pProperty = NULL;
+					delete[] pOldWAD;
 
-            return RESULT_FAIL;
-        }
-        pProperty->SetValue(this->token);
-        memset(this->token, 0, MAX_TOKEN_LENGTH + 1);
+					uint32_t* pOldSize = new uint32_t[this->wadFiles];
+					memcpy(pOldSize, this->wadSize, sizeof(uint32_t) * (this->wadFiles));
+					delete this->wadSize;
 
-        const char* pWAD = pProperty->GetValue();
-        int iToken = 0;
+					this->wadSize = new uint32_t[this->wadFiles + 1];
+					memcpy(this->wadSize, pOldSize, sizeof(uint32_t) * (this->wadFiles));
 
-        /* TODO:
-        for (int i = 0; i < strlen(pWAD) + 1; i++)
-        {
-            if ((pWAD[i] == ';') || (pWAD[i] == 0x00))
-            {
-                if (this->wad == NULL)
-                {
-                    this->wad = new LPVOID[this->wadFiles + 1];
-                    this->wadSize = new uint32_t[this->wadFiles + 1];
-                }
-                else
-                {
-                    LPVOID* pOldWAD = new LPVOID[this->wadFiles];
-                    memcpy(pOldWAD, this->wad, sizeof(LPVOID) * (this->wadFiles));
-                    delete this->wad;
+					delete[] pOldSize;
+				}
 
-                    this->wad = new LPVOID[this->wadFiles + 1];
-                    memcpy(this->wad, pOldWAD, sizeof(LPVOID) * (this->wadFiles));
+				MapFile(this->token, &this->wad[this->wadFiles], &this->wadSize[this->wadFiles]);
 
-                    delete[] pOldWAD;
+				iToken = 0;
+				this->wadFiles++;
+				memset(this->token, 0, MAX_TOKEN_LENGTH + 1);
+			}
+			else
+			{
+				this->token[iToken] = pWAD[i];
+				iToken++;
+			}
+		}
+		*/
 
-                    uint32_t* pOldSize = new uint32_t[this->wadFiles];
-                    memcpy(pOldSize, this->wadSize, sizeof(uint32_t) * (this->wadFiles));
-                    delete this->wadSize;
+		return RESULT_SUCCEED;
+	}
 
-                    this->wadSize = new uint32_t[this->wadFiles + 1];
-                    memcpy(this->wadSize, pOldSize, sizeof(uint32_t) * (this->wadFiles));
+	if (strcmp("_tb_textures", this->token) == 0)
+	{
+		prop.name = this->token;
 
-                    delete[] pOldSize;
-                }
+		// Read value
+		result = GetString();
 
-                MapFile(this->token, &this->wad[this->wadFiles], &this->wadSize[this->wadFiles]);
+		if (result != RESULT_SUCCEED)
+		{
+			std::cout << "Error reading value of property '_tb_textures'!" << std::endl;
+			return RESULT_FAIL;
+		}
 
-                iToken = 0;
-                this->wadFiles++;
-                memset(this->token, 0, MAX_TOKEN_LENGTH + 1);
-            }
-            else
-            {
-                this->token[iToken] = pWAD[i];
-                iToken++;
-            }
-        }
-        */
-        * ppProperty_ = pProperty;
+		prop.value = this->token;
+		
+		char* tok = strtok(this->token, ";");
+		
+		while (tok != NULL)
+		{
+			std::string path = tok;
+			
+			// This is kinda dumb, but Trenchbroom extracts the first folder from the textures when listing them per plane. 
+			// Remove the first directory from all paths.
+			size_t position = path.find("/");
+			if (position == std::string::npos)
+				position = path.find("\\");
 
-        return RESULT_SUCCEED;
-    }
+			if (position == std::string::npos)
+				path = ""; // root path. Just add an empty string
+			else
+			{
+				if (position + 1 > path.length())
+				{
+					// Last character of path is directory delimiter. This shouldn't happen AFAIK.
+					return RESULT_FAIL;
+				}
+				path = path.substr(position + 1);
+			}
 
-    pProperty->SetName(this->token);
+			this->textureLibs.push_back(std::move(path));
+			tok = strtok(NULL, ";");
+		}
 
-    //
-    // Read value
-    //
-    result = GetString();
+		return RESULT_SUCCEED;
+	}
 
-    if (result != RESULT_SUCCEED)
-    {
-        std::cout << "Error reading value of " << pProperty->GetName() << "!" << std::endl;
+	memset(this->token, 0, MAX_TOKEN_LENGTH + 1);
 
-        delete pProperty;
-        pProperty = NULL;
+	//
+	// Read value
+	//
+	result = GetString();
 
-        return RESULT_FAIL;
-    }
+	if (result != RESULT_SUCCEED)
+	{
+		std::cout << "Error reading value of " << prop.name << "!" << std::endl;
+		return RESULT_FAIL;
+	}
 
-    pProperty->SetValue(this->token);
-
-    *ppProperty_ = pProperty;
-
-    return RESULT_SUCCEED;
+	prop.value = this->token;
+	return RESULT_SUCCEED;
 }
 
 
-bool MAPFile::Load(const char* pcFile_, Entity* pEntities_, Texture* pTextures_)
+bool MAPFile::Load(const char* mapFilePath, std::vector<MapEntity>& entities, std::vector<MapTexture>& textures)
 {
-    //
-    // Check if parameters are valid
-    //
-    if (pcFile_ == NULL)
-    {
-        return false;
-    }
+	// Check if parameters are valid
+	if (mapFilePath == NULL)
+	{
+		return false;
+	}
 
-    if (pEntities_ != NULL)
-    {
-        delete pEntities_;
-        pEntities_ = NULL;
-    }
+	// Open .MAP file
+	this->file = fopen(mapFilePath, "r");
 
-    this->wad = NULL;
-    this->wadSize = NULL;
-    this->textureList = NULL;
+	if (this->file == nullptr)
+	{ // Failed to open file
+		return false;
+	}
 
-    this->entities = 0;
-    this->polygons = 0;
-    this->textures = 0;
+	// Parse file
+	// TODO: Add file top info to extras in gltf file.
 
-    this->wadFiles = 0;
+	this->mapEntities = &entities;
+	this->mapTextures = &textures;
 
-    //
-    // Open .MAP file
-    //
-    this->file = fopen(pcFile_, "r");
+	while (true)
+	{
+		SkipComments();
 
-    if (this->file == nullptr)
-    { // Failed to open file
-        return false;
-    }
+		MapEntity entity;
+		Result result = ParseEntity(entity);
 
-    //
-    // Parse file
-    //
-    Entity* pEntityList = NULL;
+		if (result == RESULT_EOF)
+		{
+			break;
+		}
+		else if (result == RESULT_FAIL)
+		{
+			fclose(this->file);
+			return false;
+		}
 
-    // TODO: Add file top info to extras in gltf file.
+		entities.push_back(std::move(entity));
+	}
 
+	//
+	// Clean up and return
+	//
+	std::cout << "Entities:\t" << entities.size() << std::endl;
+	//std::cout << "Polygons:\t" << this->polygons << std::endl;
+	//std::cout << "Textures:\t" << this->textures << std::endl;
 
-    while (true)
-    {
-        SkipComments();
+	fclose(this->file);
 
-        Entity* pEntity = NULL;
-        Result result = ParseEntity(&pEntity);
+	this->mapEntities = nullptr;
+	this->mapTextures = nullptr;
 
-        if (result == RESULT_EOF)
-        {
-            break;
-        }
-        else if (result == RESULT_FAIL)
-        {
-            fclose(this->file);
-
-            if (pEntity != NULL)
-            {
-                delete pEntity;
-                pEntity = NULL;
-            }
-
-            if (pEntityList != NULL)
-            {
-                delete pEntityList;
-                pEntityList = NULL;
-            }
-
-            for (int i = 0; i < this->wadFiles; i++)
-            {
-                UnmapViewOfFile(this->wad[i]);
-            }
-
-            delete[] this->wad;
-            delete[] this->wadSize;
-            delete this->textureList;
-
-            return false;
-        }
-
-        if (pEntityList == NULL)
-        {
-            pEntityList = pEntity;
-        }
-        else
-        {
-            pEntityList->AddEntity(pEntity);
-        }
-
-        this->entities++;
-    }
-
-    //
-    // Clean up and return
-    //
-    std::cout << "Entities:\t" << this->entities << std::endl;
-    std::cout << "Polygons:\t" << this->polygons << std::endl;
-    std::cout << "Textures:\t" << this->textures << std::endl;
-
-    for (int i = 0; i < this->wadFiles; i++)
-    {
-        UnmapViewOfFile(this->wad[i]);
-    }
-
-    delete[] this->wad;
-    delete[] this->wadSize;
-
-    fclose(this->file);
-
-    pEntities_ = pEntityList;
-    pTextures_ = this->textureList;
-
-    return true;
+	return true;
 }
 
 
 MAPFile::Result MAPFile::ParsePlane(Plane& p_)
 {
-    Result result = GetToken();
+	Result result = GetToken();
 
-    if (result != RESULT_SUCCEED)
-    {
-        return RESULT_FAIL;
-    }
+	if (result != RESULT_SUCCEED)
+	{
+		return RESULT_FAIL;
+	}
 
-    if (strcmp("[", this->token))
-    {
-        return RESULT_FAIL;
-    }
+	if (strcmp("[", this->token))
+	{
+		return RESULT_FAIL;
+	}
 
-    result = GetToken();
+	result = GetToken();
 
-    if (result != RESULT_SUCCEED)
-    {
-        return RESULT_FAIL;
-    }
+	if (result != RESULT_SUCCEED)
+	{
+		return RESULT_FAIL;
+	}
 
-    p_.n.x = atof(this->token);
+	p_.n.x = atof(this->token);
 
-    result = GetToken();
+	result = GetToken();
 
-    if (result != RESULT_SUCCEED)
-    {
-        return RESULT_FAIL;
-    }
+	if (result != RESULT_SUCCEED)
+	{
+		return RESULT_FAIL;
+	}
 
-    p_.n.z = atof(this->token);
+	p_.n.z = atof(this->token);
 
-    result = GetToken();
+	result = GetToken();
 
-    if (result != RESULT_SUCCEED)
-    {
-        return RESULT_FAIL;
-    }
+	if (result != RESULT_SUCCEED)
+	{
+		return RESULT_FAIL;
+	}
 
-    p_.n.y = atof(this->token);
+	p_.n.y = atof(this->token);
 
-    result = GetToken();
+	result = GetToken();
 
-    if (result != RESULT_SUCCEED)
-    {
-        return RESULT_FAIL;
-    }
+	if (result != RESULT_SUCCEED)
+	{
+		return RESULT_FAIL;
+	}
 
-    p_.d = atof(this->token);
+	p_.d = atof(this->token);
 
-    result = GetToken();
+	result = GetToken();
 
-    if (result != RESULT_SUCCEED)
-    {
-        return RESULT_FAIL;
-    }
+	if (result != RESULT_SUCCEED)
+	{
+		return RESULT_FAIL;
+	}
 
-    if (strcmp("]", this->token))
-    {
-        return RESULT_FAIL;
-    }
+	if (strcmp("]", this->token))
+	{
+		return RESULT_FAIL;
+	}
 
-    return RESULT_SUCCEED;
+	return RESULT_SUCCEED;
 }
 
 
 MAPFile::Result MAPFile::ParseVector(Vector3& v_)
 {
-    Result result = GetToken();
+	Result result = GetToken();
 
-    if (result != RESULT_SUCCEED)
-    {
-        return RESULT_FAIL;
-    }
+	if (result != RESULT_SUCCEED)
+	{
+		return RESULT_FAIL;
+	}
 
-    if (strcmp("(", this->token))
-    {
-        return RESULT_FAIL;
-    }
+	if (strcmp("(", this->token))
+	{
+		return RESULT_FAIL;
+	}
 
-    result = GetToken();
+	result = GetToken();
 
-    if (result != RESULT_SUCCEED)
-    {
-        return RESULT_FAIL;
-    }
+	if (result != RESULT_SUCCEED)
+	{
+		return RESULT_FAIL;
+	}
 
-    v_.x = atof(this->token) / scale;
+	v_.x = atof(this->token) / scale;
 
-    result = GetToken();
+	result = GetToken();
 
-    if (result != RESULT_SUCCEED)
-    {
-        return RESULT_FAIL;
-    }
+	if (result != RESULT_SUCCEED)
+	{
+		return RESULT_FAIL;
+	}
 
-    v_.z = atof(this->token) / scale;
+	v_.z = atof(this->token) / scale;
 
-    result = GetToken();
+	result = GetToken();
 
-    if (result != RESULT_SUCCEED)
-    {
-        return RESULT_FAIL;
-    }
+	if (result != RESULT_SUCCEED)
+	{
+		return RESULT_FAIL;
+	}
 
-    v_.y = atof(this->token) / scale;
+	v_.y = atof(this->token) / scale;
 
-    result = GetToken();
+	result = GetToken();
 
-    if (result != RESULT_SUCCEED)
-    {
-        return RESULT_FAIL;
-    }
+	if (result != RESULT_SUCCEED)
+	{
+		return RESULT_FAIL;
+	}
 
-    if (strcmp(")", this->token))
-    {
-        return RESULT_FAIL;
-    }
+	if (strcmp(")", this->token))
+	{
+		return RESULT_FAIL;
+	}
 
-    return RESULT_SUCCEED;
+	return RESULT_SUCCEED;
 }
 
 
 MAPFile::Result MAPFile::GetToken()
 {
-    unsigned int i = 0;
-    char c = 0;
-    memset(&this->token, 0, sizeof(this->token));
+	unsigned int i = 0;
+	char c = 0;
+	memset(&this->token, 0, sizeof(this->token));
 
-    while (i <= MAX_TOKEN_LENGTH)
-    {
-        c = fgetc(this->file);
-        if (c == EOF)
-        {
-            if (feof(this->file))
-                return RESULT_EOF;
-            else
-                return RESULT_FAIL;
-        }
+	while (i <= MAX_TOKEN_LENGTH)
+	{
+		c = fgetc(this->file);
+		if (c == EOF)
+		{
+			if (feof(this->file))
+				return RESULT_EOF;
+			else
+				return RESULT_FAIL;
+		}
 
-        //
-        // Check for token end
-        //
-        if (c == ' ' || c == '\n' || c == '\r')
-        {
-            break;
-        }
+		//
+		// Check for token end
+		//
+		if (c == ' ' || c == '\n' || c == '\r')
+		{
+			break;
+		}
 
-        this->token[i] = c;
-        
-        i++;
-    }
+		this->token[i] = c;
 
-    return RESULT_SUCCEED;
+		i++;
+	}
+
+	return RESULT_SUCCEED;
 }
 
 
 MAPFile::Result MAPFile::GetString()
 {
-    unsigned int i = 0;
-    char c = 0;
-    bool bFinished = false;
+	unsigned int i = 0;
+	char c = 0;
+	bool bFinished = false;
 
-    memset(&this->token, 0, sizeof(this->token));
+	memset(&this->token, 0, sizeof(this->token));
 
-    //
-    // Read first "
-    //
-    c = fgetc(this->file);
-    if (c == EOF)
-    {
-        if (feof(this->file))
-            return RESULT_EOF;
-        else
-            return RESULT_FAIL;
-    }
+	//
+	// Read first "
+	//
+	c = fgetc(this->file);
+	if (c == EOF)
+	{
+		if (feof(this->file))
+			return RESULT_EOF;
+		else
+			return RESULT_FAIL;
+	}
 
-    //
-    // Parse rest of string
-    //
-    while (i <= MAX_TOKEN_LENGTH)
-    {
-        c = fgetc(this->file);
-        if (c == EOF)
-        {
-            return RESULT_FAIL;
-        }
+	//
+	// Parse rest of string
+	//
+	while (i <= MAX_TOKEN_LENGTH)
+	{
+		c = fgetc(this->file);
+		if (c == EOF)
+		{
+			return RESULT_FAIL;
+		}
 
-        //
-        // Check for token end
-        //
-        if (c == '"')
-        {
-            bFinished = true;
-        }
+		//
+		// Check for token end
+		//
+		if (c == '"')
+		{
+			bFinished = true;
+		}
 
-        if (bFinished && (c == ' '))
-        {
-            break;
-        }
+		if (bFinished && (c == ' '))
+		{
+			break;
+		}
 
-        if (bFinished && (c == 0x0A))
-        {
-            break;
-        }
+		if (bFinished && (c == 0x0A))
+		{
+			break;
+		}
 
-        if (!bFinished)
-        {
-            this->token[i] = c;
-        }
+		if (!bFinished)
+		{
+			this->token[i] = c;
+		}
 
-        i++;
-    }
+		i++;
+	}
 
-    return RESULT_SUCCEED;
+	return RESULT_SUCCEED;
 }
 
 MAPFile::Result MAPFile::SkipComments()
 {
-    // Skip comments
-    {
-        char buf[2];
-        while (true)
-        {
-            for (int i = 0; i < 2; i++)
-            {
-                buf[i] = fgetc(this->file);
-                if (buf[i] == EOF)
-                {
-                    if (feof(this->file))
-                        return RESULT_EOF;
-                    else
-                        return RESULT_FAIL;
-                }
-            }
-            
-            if (strncmp("//", buf, 2) == 0)
-            {
-                while (true)
-                {// seek new line
-                    char c = fgetc(this->file);
-                    if (c == EOF)
-                    {
-                        if (feof(this->file))
-                            return RESULT_EOF;
-                        else
-                            return RESULT_FAIL;
-                    }
-                    if (c == '\n' || c == '\r')
-                    {
-                        break;
-                    }
+	// Skip comments
+	{
+		char buf[2];
+		while (true)
+		{
+			for (int i = 0; i < 2; i++)
+			{
+				buf[i] = fgetc(this->file);
+				if (buf[i] == EOF)
+				{
+					if (feof(this->file))
+						return RESULT_EOF;
+					else
+						return RESULT_FAIL;
+				}
+			}
 
-                }
-            }
-            else
-            {
-                // move back 2 characters, since we checked for comments previously and apparently 
-                ungetc(buf[1], this->file);
-                ungetc(buf[0], this->file);
-                break;
-            }
-        }
-    }
+			if (strncmp("//", buf, 2) == 0)
+			{
+				while (true)
+				{// seek new line
+					char c = fgetc(this->file);
+					if (c == EOF)
+					{
+						if (feof(this->file))
+							return RESULT_EOF;
+						else
+							return RESULT_FAIL;
+					}
+					if (c == '\n' || c == '\r')
+					{
+						break;
+					}
 
-    return Result::RESULT_SUCCEED;
+				}
+			}
+			else
+			{
+				// move back 2 characters, since we checked for comments previously and apparently 
+				ungetc(buf[1], this->file);
+				ungetc(buf[0], this->file);
+				break;
+			}
+		}
+	}
+
+	return Result::RESULT_SUCCEED;
 }

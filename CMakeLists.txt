@@ -38,11 +38,16 @@ SET(files_exts_fx
 	exts/fx/json.hpp
 )
 
+SET(files_exts_stb
+	exts/stb/stbimage.h
+)
+
 SOURCE_GROUP("mtg" FILES ${files_map_to_gltf})
 SOURCE_GROUP("map-files" FILES ${files_exts_map_files})
 SOURCE_GROUP("fx" FILES ${files_exts_fx})
+SOURCE_GROUP("stb" FILES ${files_exts_stb})
 
-ADD_EXECUTABLE(mtg ${files_map_to_gltf} ${files_exts_map_files} ${files_exts_fx})
+ADD_EXECUTABLE(mtg ${files_map_to_gltf} ${files_exts_map_files} ${files_exts_fx} ${files_exts_stb})
 
 IF(WIN32)
 	IF(MSVC)

@@ -133,3 +133,34 @@ public:
 	Entity ( );
 	~Entity ( );
 };
+
+struct MapTexture
+{
+	uint32_t id;
+	uint32_t width;
+	uint32_t height;
+	std::string name;
+};
+
+struct MapPoly
+{
+	std::vector<Vertex> verts;
+	Plane plane;
+	uint32_t textureId;
+
+	bool CalculatePlane();
+	void SortVerticesCW();
+	void CalculateTextureCoordinates(int const texWidth, int const texHeight, Plane const texAxis[2], double const texScale[2]);
+};
+
+struct MapProperty
+{
+	std::string name;
+	std::string value;
+};
+
+struct MapEntity
+{
+	std::vector<MapProperty> properties;
+	std::vector<MapPoly> polys;
+};

@@ -14,6 +14,8 @@ void PrintHelp()
         "--help, -h \t Print cli argument information.\n"
         "-glb \t File should be exported into GLB format.\n"
         "-o [file]\t Path to output file. If not specified, the file will be placed adjacent to the input file but with different extension.\n"
+        "-unify\t Perform CSG union between all brushes of an entity. This reduces the amount of ouput meshes and polygons.\n"
+        "-texroot [folder name]\t Specify a texture root folder relative to cwd (default: \"textures\")\n"
         << std::endl;
 }
 
@@ -53,10 +55,17 @@ int main(int argc, char** argv)
         << outputFilePath << "..." << std::endl;
     
     MAPFile mapFile;
-    Entity* entities = nullptr;
-    Texture* textures = nullptr;
-    std::string inputFilePathString = inputFilePath.string();
-    mapFile.Load(inputFilePathString.c_str(), entities, textures);
+    mapFile.unify = args.get<bool>("unify", false);
+    mapFile.textureRoot = args.get<std::string>("texRoot", "textures");
 
-    return 0;
+    std::vector<MapEntity> entities;
+    std::vector<MapTexture> textures;
+    std::string inputFilePathString = inputFilePath.string();
+    bool loaded = mapFile.Load(inputFilePathString.c_str(), entities, textures);
+    if (loaded)
+    {
+        return 0;
+    }
+
+    return 1;
 }
