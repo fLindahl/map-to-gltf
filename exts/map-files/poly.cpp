@@ -705,6 +705,48 @@ Poly::~Poly()
 }
 
 
+void MapPoly::AddVertex(Vertex const& vert)
+{
+	this->min.min(vert.p);
+	this->min.max(vert.p);
+	this->verts.push_back(vert);
+}
+
+void MapPoly::Triangulate()
+{
+	const uint32_t faceNumVertices = this->verts.size();
+
+	std::vector<Vertex> vertexBuffer;
+	vertexBuffer.reserve(this->verts.size() + 2); // pretty standard that we have a polygon of 4 vertices, and want to expand it to 6.
+
+	uint32_t triOffset = 0;
+
+	Vertex v0 = this->verts[triOffset + 0];
+	Vertex v1 = this->verts[triOffset + 1];
+	Vertex v2 = this->verts[triOffset + 2];
+
+	vertexBuffer.push_back(v0);
+	vertexBuffer.push_back(v1);
+	vertexBuffer.push_back(v2);
+
+	triOffset++;
+	uint32_t vert = faceNumVertices;
+	// loop over remaining vertices that make up any polygon that is > 3 vertices
+	while (vert > 3)
+	{
+		uint32_t vertexOffset = 3 + faceNumVertices - vert;
+		// fan triangulate
+		Vertex v3 = this->verts[vertexOffset];
+		vertexBuffer.push_back(v0);
+		vertexBuffer.push_back(v2);
+		vertexBuffer.push_back(v3);
+		vert--;
+		v2 = v3;
+	}
+
+	this->verts = vertexBuffer;
+}
+
 bool MapPoly::CalculatePlane()
 {
 	Vector3	centerOfMass;
@@ -954,5 +996,28 @@ void MapPoly::CalculateTextureCoordinates(int const texWidth, int const texHeigh
 			this->verts[i].tex[0] = this->verts[i].tex[0] - NearestU;
 			this->verts[i].tex[1] = this->verts[i].tex[1] - NearestV;
 		}
+	}
+}
+
+std::vector<MapPoly> MergePolygons(std::vector<MapPoly> const& polygons)
+{
+	std::vector<MapPoly> ret;
+
+	// texture id -> ret vector index
+	std::unordered_map<uint32_t, uint32_t> map;
+
+	for (size_t i = 0; i < polygons.size(); i++)
+	{
+		MapPoly const& poly = polygons[i];
+
+		MapPoly* newPolygon;
+
+		auto it = map.find(poly.textureId);
+		if (it == map.end());
+		{
+			ret.
+		}
+
+		poly.textureId
 	}
 }

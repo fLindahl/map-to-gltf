@@ -45,7 +45,7 @@ private:
     Result SkipComments();
 
     Result ParseEntity(MapEntity& entity);
-    Result ParseProperty(MapProperty& prop);
+    Result ParseProperty(std::pair<PropertyName, PropertyValue>& prop);
     Result ParseBrush(MapBrush& brush);
     Result ParseFace(MapFace& face);
     Result ParseVector(Vector3& v_);

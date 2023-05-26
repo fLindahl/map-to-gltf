@@ -344,15 +344,8 @@ void MapBrush::CalculateAABB()
 
     for (MapPoly const& poly : this->polys)
     {
-        for (size_t i = 0; i < poly.verts.size(); i++)
-        {
-            if (poly.verts[i].p.x < min.x) min.x = poly.verts[i].p.x;
-            if (poly.verts[i].p.y < min.y) min.y = poly.verts[i].p.y;
-            if (poly.verts[i].p.z < min.z) min.z = poly.verts[i].p.z;
-            if (poly.verts[i].p.x > max.x) max.x = poly.verts[i].p.x;
-            if (poly.verts[i].p.y > max.y) max.y = poly.verts[i].p.y;
-            if (poly.verts[i].p.z > max.z) max.z = poly.verts[i].p.z;
-        }
+        min.min(poly.min);
+        max.max(poly.max);
     }
 }
 

@@ -5,6 +5,7 @@
 #include "flags.h"
 #include "exts/fx/gltf.h"
 #include "exts/map-files/map.h"
+#include <assert.h>
 
 void PrintHelp()
 {
@@ -17,6 +18,7 @@ void PrintHelp()
         "-unify\t Perform CSG union between all brushes of an entity. This reduces the amount of ouput meshes and polygons.\n"
         "-texroot [folder name]\t Specify a texture root folder relative to cwd (default: \"textures\")\n"
         "-copyright [copyright notice]\t Specify a copyright notice that will be embeded in the exported file.\n"
+        "-filter\t Use linear filtering for all textures.\n"
         << std::endl;
 }
 
@@ -69,9 +71,9 @@ int main(int argc, char** argv)
 
         gltf::Document doc;
         doc.asset.generator = "map-to-gltf by Fredrik Lindahl";
-        doc.asset.copyright = args.get<std::string>("copyright", "");
+        doc.asset.copyright = args.get<std::string>("copyright", {});
 
-        {
+        { // setup scenes
             gltf::Scene scene;
             scene.name = "";
             scene.nodes.push_back(0);
@@ -79,10 +81,71 @@ int main(int argc, char** argv)
             doc.scene = 0;
         }
 
+        int32_t samplerDefaultId = 0;
+        { // setup samplers
+            gltf::Sampler samplerDefault;
+            bool filter = args.get<bool>("filter", false);
+            samplerDefault.magFilter = filter ? gltf::Sampler::MagFilter::Linear : gltf::Sampler::MagFilter::Nearest;
+            samplerDefault.minFilter = filter ? gltf::Sampler::MinFilter::LinearMipMapLinear : gltf::Sampler::MinFilter::Nearest;
+            samplerDefaultId = doc.samplers.size();
+            doc.samplers.push_back(std::move(samplerDefault));
+        }
+
+        for (auto const& texture : textures)
+        {
+            gltf::Material mat;
+            gltf::Texture tex;
+            
+            gltf::Image img;
+            img.uri = mapFile.textureRoot + "/" + texture.name;
+            int32_t const imgId = doc.images.size();
+
+#ifdef _DEBUG
+            int32_t const texId = doc.textures.size();
+            int32_t const matId = doc.materials.size();
+            // Textures and materials in the gltf should be adjacent to the map textures
+            assert(imgId == texture.id && texId == texture.id && matId == texture.id);
+#endif
+
+            tex.source = imgId;
+            tex.name = std::filesystem::path(texture.name).replace_extension("").string();
+            tex.sampler = samplerDefaultId;
+            
+            doc.images.push_back(std::move(img));
+            doc.textures.push_back(std::move(tex));
+            doc.materials.push_back(std::move(mat));
+        }
+
         for (auto const& entity : entities)
         {
             gltf::Node node;
-            entity.properties
+            auto nameIt = entity.properties.find("_tb_name");
+            if (nameIt != entity.properties.end())
+            {
+                node.name = nameIt->second;
+            }
+            
+            gltf::Mesh mesh;
+
+            for (MapPoly const& poly : entity.polys)
+            {
+                gltf::Accessor posAccessor;
+                posAccessor.min = { (float)poly.min.x, (float)poly.min.y, (float)poly.min.z };
+                posAccessor.max = { (float)poly.max.x, (float)poly.max.y, (float)poly.max.z };
+                
+                gltf::Primitive primitive;
+                primitive.mode = gltf::Primitive::Mode::Triangles;
+                primitive.material = poly.textureId;
+
+                primitive.attributes = {
+                    {"POSITION", 1},
+                    {"TEXCOORD_0", 2}
+                };
+            }
+
+            mesh.primitives
+
+            //entity.properties
         }
 
         return 0;

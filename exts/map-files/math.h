@@ -20,6 +20,20 @@ class Vector3
 public:
 	double x, y, z;
 
+	void min(Vector3 const& rhs)
+	{
+		x = x < rhs.x ? x : rhs.x;
+		y = y < rhs.y ? y : rhs.y;
+		z = z < rhs.z ? z : rhs.z;
+	}
+
+	void max(Vector3 const& rhs)
+	{
+		x = x > rhs.x ? x : rhs.x;
+		y = y > rhs.y ? y : rhs.y;
+		z = z > rhs.z ? z : rhs.z;
+	}
+
 	const bool operator == ( const Vector3 &arg_ ) const
 	{
 		if ( ( x == arg_.x ) && ( y == arg_.y ) && ( z == arg_.z ) )

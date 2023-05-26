@@ -226,9 +226,9 @@ std::vector<MapPoly> DerivePolys(std::vector<MapFace> const& faces)
 					{
 						// The point is not outside the brush
 						Vertex v = { p };
-						pi->verts.push_back(v);
-						pj->verts.push_back(v);
-						pk->verts.push_back(v);
+						pi->AddVertex(v);
+						pj->AddVertex(v);
+						pk->AddVertex(v);
 					}
 				}
 				pk++;

@@ -1,5 +1,5 @@
 #pragma once
-
+#include <map>
 
 ////////////////////////////////////////////////////////////////////
 // Class definitions
@@ -144,23 +144,47 @@ struct MapTexture
 
 struct MapPoly
 {
+	Vector3 min, max;
 	std::vector<Vertex> verts;
 	Plane plane;
 	uint32_t textureId;
+
+	void AddVertex(Vertex const& vert);
+
+	void Triangulate();
 
 	bool CalculatePlane();
 	void SortVerticesCW();
 	void CalculateTextureCoordinates(int const texWidth, int const texHeight, Plane const texAxis[2], double const texScale[2]);
 };
 
-struct MapProperty
+struct Primitive
 {
-	std::string name;
-	std::string value;
+	struct VertexPNT
+	{
+		float p[3];
+		float n[3];
+		float t[2];
+	};
+
+	Vector3 min, max;
+	std::vector<VertexPNT> vertexBuffer;
+	uint32_t textureId;
+
 };
+
+// Merges all polygons that share the same texture
+std::vector<Primitive> GeneratePrimitives(std::vector<MapPoly> const& polygons);
+
+
+using PropertyName = std::string;
+using PropertyValue = std::string;
 
 struct MapEntity
 {
-	std::vector<MapProperty> properties;
+	std::map<PropertyName, PropertyValue> properties;
 	std::vector<MapPoly> polys;
+	std::vector<Primitive> primitives;
+	Vector3 bboxMin;
+	Vector3 bboxMax;
 };

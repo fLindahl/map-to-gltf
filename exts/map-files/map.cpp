@@ -62,7 +62,7 @@ MAPFile::Result MAPFile::ParseEntity(MapEntity& entity)
 
 		if (c == '"')
 		{ // Property
-			MapProperty prop;
+			std::pair<PropertyName, PropertyValue> prop;
 
 			result = ParseProperty(prop);
 
@@ -72,7 +72,7 @@ MAPFile::Result MAPFile::ParseEntity(MapEntity& entity)
 				return RESULT_FAIL;
 			}
 
-			entity.properties.push_back(prop);
+			entity.properties.emplace(prop);
 		}
 		else if (c == '{')
 		{ // Brush
@@ -92,19 +92,31 @@ MAPFile::Result MAPFile::ParseEntity(MapEntity& entity)
 		{ // End of entity
 			if (!brushes.empty())
 			{
+				std::vector<MapPoly> polygons;
 				if (this->unify)
 				{
 					std::vector<MapPoly> polygons = CSG::Union(brushes);
-					entity.polys.insert(entity.polys.end(), polygons.begin(), polygons.end());
 				}
 				else
 				{
 					// Do not perform CSG union (useful for debugging)
 					for (auto const& brush : brushes)
 					{
-						entity.polys.insert(entity.polys.end(), brush.polys.begin(), brush.polys.end());
+						polygons.insert(polygons.end(), brush.polys.begin(), brush.polys.end());
+						
 					}
 				}
+
+				// Triangulate polygons
+				for (size_t i = 0; i < polygons.size(); i++)
+				{
+					MapPoly& poly = polygons[i];
+					poly.Triangulate();
+				}
+
+				polygons = MergePolygons(polygons);
+
+				entity.polys.insert(entity.polys.end(), polygons.begin(), polygons.end());
 			}
 			break;
 		}
@@ -187,9 +199,9 @@ MAPFile::Result MAPFile::ParseFace(MapFace& face)
 					texture.id = static_cast<uint32_t>(this->mapTextures->size());
 					texture.width = x;
 					texture.height = y;
-					texture.name = this->token;
+					texture.name = std::string(this->token) + supportedExts[i];
 
-					this->textureTable[texture.name] = texture.id;
+					this->textureTable[std::string(this->token)] = texture.id;
 					this->mapTextures->push_back(texture);
 
 					textureId = texture.id;
@@ -360,7 +372,7 @@ MAPFile::Result MAPFile::ParseBrush(MapBrush& brush)
 }
 
 
-MAPFile::Result MAPFile::ParseProperty(MapProperty& prop)
+MAPFile::Result MAPFile::ParseProperty(std::pair<PropertyName, PropertyValue>& prop)
 {
 	//
 	// Read name
@@ -373,7 +385,7 @@ MAPFile::Result MAPFile::ParseProperty(MapProperty& prop)
 		return RESULT_FAIL;
 	}
 
-	prop.name = this->token;
+	prop.first = this->token;
 
 	if (strcmp("mapversion", this->token) == 0)
 	{
@@ -393,15 +405,13 @@ MAPFile::Result MAPFile::ParseProperty(MapProperty& prop)
 			return RESULT_FAIL;
 		}
 
-		prop.value = this->token;
+		prop.second = this->token;
 
 		return RESULT_SUCCEED;
 	}
 
 	if (strcmp("wad", this->token) == 0)
 	{
-		prop.name = this->token;
-
 		// Read value
 		result = GetString();
 
@@ -411,10 +421,10 @@ MAPFile::Result MAPFile::ParseProperty(MapProperty& prop)
 			return RESULT_FAIL;
 		}
 
-		prop.value = this->token;
+		prop.second = this->token;
 		memset(this->token, 0, MAX_TOKEN_LENGTH + 1);
 
-		std::string_view const wads = prop.value;
+		std::string_view const wads = prop.second;
 		int iToken = 0;
 
 		/* TODO:
@@ -467,8 +477,6 @@ MAPFile::Result MAPFile::ParseProperty(MapProperty& prop)
 
 	if (strcmp("_tb_textures", this->token) == 0)
 	{
-		prop.name = this->token;
-
 		// Read value
 		result = GetString();
 
@@ -478,7 +486,7 @@ MAPFile::Result MAPFile::ParseProperty(MapProperty& prop)
 			return RESULT_FAIL;
 		}
 
-		prop.value = this->token;
+		prop.second = this->token;
 		
 		char* tok = strtok(this->token, ";");
 		
@@ -520,11 +528,11 @@ MAPFile::Result MAPFile::ParseProperty(MapProperty& prop)
 
 	if (result != RESULT_SUCCEED)
 	{
-		std::cout << "Error reading value of " << prop.name << "!" << std::endl;
+		std::cout << "Error reading value of " << prop.first << "!" << std::endl;
 		return RESULT_FAIL;
 	}
 
-	prop.value = this->token;
+	prop.second = this->token;
 	return RESULT_SUCCEED;
 }
 
