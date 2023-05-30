@@ -1010,12 +1010,13 @@ std::vector<MapPoly> MergePolygons(std::vector<MapPoly> const& polygons)
 	{
 		MapPoly const& poly = polygons[i];
 
-		MapPoly* newPolygon;
+		MapPoly* outPoly;
 
 		auto it = map.find(poly.textureId);
 		if (it == map.end());
 		{
-			ret.
+			ret.push_back()
+			outPoly = 
 		}
 
 		poly.textureId
