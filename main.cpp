@@ -143,7 +143,7 @@ int main(int argc, char** argv)
                 };
             }
 
-            mesh.primitives
+            
 
             //entity.properties
         }
