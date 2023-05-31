@@ -1,5 +1,4 @@
 #pragma once
-
 ////////////////////////////////////////////////////////////////////
 // Constants
 ////////////////////////////////////////////////////////////////////
@@ -16,6 +15,7 @@ const unsigned int MAX_TEXTURE_LENGTH = 16;
 #include <fstream>
 #include <vector>
 #include <unordered_map>
+#include <cstdint>
 
 #include "math.h"
 #include "entity.h"
