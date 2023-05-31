@@ -1,4 +1,5 @@
 #include "map.h"
+#include <cstring>
 
 
 ////////////////////////////////////////////////////////////////////
@@ -95,7 +96,7 @@ void Property::SetName(const char* pacName_)
         m_pacName = NULL;
     }
 
-    m_pacName = new char[strlen(pacName_) + 1];
+    m_pacName = new char[std::strlen(pacName_) + 1];
 
     strcpy(m_pacName, pacName_);
 }
@@ -109,7 +110,7 @@ void Property::SetValue(const char* pacValue_)
         m_pacValue = NULL;
     }
 
-    m_pacValue = new char[strlen(pacValue_) + 1];
+    m_pacValue = new char[std::strlen(pacValue_) + 1];
 
     strcpy(m_pacValue, pacValue_);
 }
