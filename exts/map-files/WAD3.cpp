@@ -39,6 +39,8 @@
 #include "WAD3.h"
 #include "stdio.h"
 
+#ifdef _WIN32
+
 void MapFile( LPCTSTR szFileName, LPVOID *pView, LPDWORD pdwFileSize )
 {
 	HANDLE hFile = NULL;
@@ -127,3 +129,5 @@ int CorruptWAD3( LPCTSTR szErrorMessage, LPVOID lpView)
 	// We never actually get here, but oh well
 	return 1;
 }
+
+#endif

@@ -1,5 +1,6 @@
 #pragma once
 
+#ifdef _WIN32
 // WAD3 (Half-Life) Header and mip structs
 #include <iostream>
 #include <windows.h>
@@ -113,3 +114,4 @@ public:
 		}
 	}
 };
+#endif
