@@ -116,6 +116,24 @@ int main(int argc, char** argv)
             doc.materials.push_back(std::move(mat));
         }
 
+        gltf::Buffer vertexBuffer;
+
+        size_t vertexBufferSize = 0;
+        for (auto const& entity : entities)
+        {
+            for (size_t i = 0; i < entity.primitives.size(); i++)
+            {
+                vertexBufferSize += entity.primitives[i].vertexBuffer.size() * sizeof(Primitive::VertexPNT);
+            }
+        }
+        
+        vertexBuffer.data.resize(vertexBufferSize);
+        size_t byteOffset = 0;
+        uint8_t* bufOffset = vertexBuffer.data.data();
+        
+        uint32_t const vertexBufferIndex = doc.buffers.size();
+        doc.buffers.push_back(std::move(vertexBuffer));
+
         for (auto const& entity : entities)
         {
             gltf::Node node;
@@ -127,25 +145,43 @@ int main(int argc, char** argv)
             
             gltf::Mesh mesh;
 
-            for (MapPoly const& poly : entity.polys)
+            for (size_t i = 0; i < entity.primitives.size(); i++)
             {
-                gltf::Accessor posAccessor;
-                posAccessor.min = { (float)poly.min.x, (float)poly.min.y, (float)poly.min.z };
-                posAccessor.max = { (float)poly.max.x, (float)poly.max.y, (float)poly.max.z };
+                Primitive const& primitive = entity.primitives[i];
+                size_t numBytes = primitive.vertexBuffer.size() * sizeof(Primitive::VertexPNT);
+                std::memcpy(bufOffset, primitive.vertexBuffer.data(), numBytes);
                 
-                gltf::Primitive primitive;
-                primitive.mode = gltf::Primitive::Mode::Triangles;
-                primitive.material = poly.textureId;
+                gltf::BufferView view;
+                view.buffer = vertexBufferIndex;
+                view.byteOffset = byteOffset;
+                view.byteLength = numBytes;
+                view.target = gltf::BufferView::TargetType::ArrayBuffer;
+                uint32_t const viewIndex = doc.bufferViews.size();
+                doc.bufferViews.push_back(view);
 
-                primitive.attributes = {
+                gltf::Accessor posAccessor;
+                posAccessor.min = { (float)primitive.min.x, (float)primitive.min.y, (float)primitive.min.z };
+                posAccessor.max = { (float)primitive.max.x, (float)primitive.max.y, (float)primitive.max.z };
+                posAccessor.bufferView = viewIndex;
+                posAccessor.count = primitive.vertexBuffer.size();
+                posAccessor.type = gltf::Accessor::Type::Vec3;
+                posAccessor.componentType = gltf::Accessor::ComponentType::Float;
+                posAccessor.
+
+
+                gltf::Primitive gltfPrimitive;
+                gltfPrimitive.mode = gltf::Primitive::Mode::Triangles;
+                gltfPrimitive.material = primitive.textureId;
+
+                gltfPrimitive.attributes = {
                     {"POSITION", 1},
-                    {"TEXCOORD_0", 2}
+                    {"NORMAL", 2},
+                    {"TEXCOORD_0", 3}
                 };
+
+                bufOffset += numBytes;
+                byteOffset += numBytes;
             }
-
-            
-
-            //entity.properties
         }
 
         return 0;

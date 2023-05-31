@@ -169,3 +169,58 @@ unsigned int Entity::GetNumberOfPolys ( ) const
 
 	return uiCount;
 }
+
+std::vector<Primitive> GeneratePrimitives(std::vector<MapPoly> polygons)
+{
+	for (size_t i = 0; i < polygons.size(); i++)
+	{
+		MapPoly& poly = polygons[i];
+		poly.Triangulate();	
+	}
+
+	std::vector<Primitive> ret;
+
+	// texture id -> ret vector index
+	std::unordered_map<uint32_t, uint32_t> map;
+
+	for (size_t i = 0; i < polygons.size(); i++)
+	{
+		MapPoly const& poly = polygons[i];
+
+		Primitive* prim;
+
+		auto it = map.find(poly.textureId);
+		if (it == map.end())
+		{
+			map[poly.textureId] = ret.size();
+			Primitive primitive;
+			primitive.min = poly.min;
+			primitive.max = poly.max;
+			primitive.textureId = poly.textureId;
+
+			ret.push_back(primitive);
+			prim = &ret.back();
+		}
+		else
+		{
+			prim = &ret[it->second];
+		}
+
+		// merge
+		for (size_t i = 0; i < poly.verts.size(); i++)
+		{
+			// NOTE: currently assuming vertices are in triangle list order, without indexbuffer
+			Primitive::VertexPNT v = {
+				/* p */ { poly.verts[i].p.x, poly.verts[i].p.y, poly.verts[i].p.z },
+				/* n */ { poly.plane.n.x, poly.plane.n.y, poly.plane.n.z },
+				/* t */ { poly.verts[i].tex[0], poly.verts[i].tex[1] }
+			};
+			prim->vertexBuffer.push_back(v);
+		}
+
+		prim->min.minimize(poly.min);
+		prim->max.maximize(poly.max);
+	}
+
+	return ret;
+}

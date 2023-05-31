@@ -174,7 +174,7 @@ struct Primitive
 };
 
 // Merges all polygons that share the same texture
-std::vector<Primitive> GeneratePrimitives(std::vector<MapPoly> const& polygons);
+std::vector<Primitive> GeneratePrimitives(std::vector<MapPoly> polygons);
 
 
 using PropertyName = std::string;

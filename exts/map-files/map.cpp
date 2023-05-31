@@ -107,15 +107,6 @@ MAPFile::Result MAPFile::ParseEntity(MapEntity& entity)
 					}
 				}
 
-				// Triangulate polygons
-				for (size_t i = 0; i < polygons.size(); i++)
-				{
-					MapPoly& poly = polygons[i];
-					poly.Triangulate();
-				}
-
-				polygons = MergePolygons(polygons);
-
 				entity.polys.insert(entity.polys.end(), polygons.begin(), polygons.end());
 			}
 			break;
@@ -135,6 +126,8 @@ MAPFile::Result MAPFile::ParseEntity(MapEntity& entity)
 		std::cout << "Error reading entity!" << std::endl;
 		return RESULT_FAIL;
 	}
+
+	entity.primitives = GeneratePrimitives(entity.polys);
 
 	return RESULT_SUCCEED;
 }
