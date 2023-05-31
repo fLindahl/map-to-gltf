@@ -1,5 +1,5 @@
 #include "map.h"
-
+#include <cstring>
 
 ////////////////////////////////////////////////////////////////////
 // Poly member functions
@@ -174,7 +174,7 @@ Poly* Poly::CopyPoly() const
 	pPoly->plane = plane;
 
 	pPoly->verts = new Vertex[m_iNumberOfVertices];
-	memcpy(pPoly->verts, verts, sizeof(Vertex) * m_iNumberOfVertices);
+	std::memcpy(pPoly->verts, verts, sizeof(Vertex) * m_iNumberOfVertices);
 
 	return pPoly;
 }
@@ -190,7 +190,7 @@ Poly* Poly::CopyList() const
 	pPoly->plane = plane;
 
 	pPoly->verts = new Vertex[m_iNumberOfVertices];
-	memcpy(pPoly->verts, verts, sizeof(Vertex) * m_iNumberOfVertices);
+	std::memcpy(pPoly->verts, verts, sizeof(Vertex) * m_iNumberOfVertices);
 
 	if (!IsLast())
 	{
@@ -660,7 +660,7 @@ void Poly::SetNext(Poly* pPoly_)
 void Poly::AddVertex(Vertex& Vertex_)
 {
 	Vertex* pVertices = new Vertex[m_iNumberOfVertices + 1];
-	memcpy(pVertices, verts, sizeof(Vertex) * m_iNumberOfVertices);
+	std::memcpy(pVertices, verts, sizeof(Vertex) * m_iNumberOfVertices);
 	delete[] verts;
 	verts = pVertices;
 	verts[m_iNumberOfVertices] = Vertex_;
