@@ -344,8 +344,8 @@ void MapBrush::CalculateAABB()
 
     for (MapPoly const& poly : this->polys)
     {
-        min.min(poly.min);
-        max.max(poly.max);
+        min.minimize(poly.min);
+        max.maximize(poly.max);
     }
 }
 

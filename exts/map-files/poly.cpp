@@ -707,8 +707,8 @@ Poly::~Poly()
 
 void MapPoly::AddVertex(Vertex const& vert)
 {
-	this->min.min(vert.p);
-	this->min.max(vert.p);
+	this->min.minimize(vert.p);
+	this->min.maximize(vert.p);
 	this->verts.push_back(vert);
 }
 
@@ -1013,12 +1013,25 @@ std::vector<MapPoly> MergePolygons(std::vector<MapPoly> const& polygons)
 		MapPoly* outPoly;
 
 		auto it = map.find(poly.textureId);
-		if (it == map.end());
+		if (it == map.end())
 		{
-			ret.push_back()
-			outPoly = 
+			map[poly.textureId] = ret.size();
+			ret.push_back(poly);
+			outPoly = &ret.back();
+		}
+		else
+		{
+			outPoly = &ret[it->second];
 		}
 
-		poly.textureId
+		// merge
+		for (size_t i = 0; i < poly.verts.size(); i++)
+		{
+			// NOTE: currently assuming vertices are in triangle list order, without indexbuffer
+			outPoly->verts.push_back(poly.verts[i]);
+		}
+
+		outPoly->min.minimize(poly.min);
+		outPoly->max.maximize(poly.max);
 	}
 }
