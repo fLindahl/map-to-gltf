@@ -192,7 +192,7 @@ std::vector<Primitive> GeneratePrimitives(std::vector<MapPoly> polygons)
 		auto it = map.find(poly.textureId);
 		if (it == map.end())
 		{
-			map[poly.textureId] = ret.size();
+			map[poly.textureId] = (uint32_t)ret.size();
 			Primitive primitive;
 			primitive.min = poly.min;
 			primitive.max = poly.max;
@@ -210,12 +210,14 @@ std::vector<Primitive> GeneratePrimitives(std::vector<MapPoly> polygons)
 		for (size_t i = 0; i < poly.verts.size(); i++)
 		{
 			// NOTE: currently assuming vertices are in triangle list order, without indexbuffer
-			Primitive::VertexPNT v = {
-				/* p */ { poly.verts[i].p.x, poly.verts[i].p.y, poly.verts[i].p.z },
-				/* n */ { poly.plane.n.x, poly.plane.n.y, poly.plane.n.z },
-				/* t */ { poly.verts[i].tex[0], poly.verts[i].tex[1] }
-			};
-			prim->vertexBuffer.push_back(v);
+			prim->positionBuffer.push_back((float)poly.verts[i].p.x);
+			prim->positionBuffer.push_back((float)poly.verts[i].p.y);
+			prim->positionBuffer.push_back((float)poly.verts[i].p.z);
+			prim->normalBuffer.push_back((float)poly.plane.n.x);
+			prim->normalBuffer.push_back((float)poly.plane.n.y);
+			prim->normalBuffer.push_back((float)poly.plane.n.z);
+			prim->texcoordBuffer.push_back((float)poly.verts[i].tex[0]);
+			prim->texcoordBuffer.push_back((float)poly.verts[i].tex[1]);
 		}
 
 		prim->min.minimize(poly.min);

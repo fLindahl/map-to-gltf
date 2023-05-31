@@ -160,15 +160,10 @@ struct MapPoly
 
 struct Primitive
 {
-	struct VertexPNT
-	{
-		float p[3];
-		float n[3];
-		float t[2];
-	};
-
 	Vector3 min, max;
-	std::vector<VertexPNT> vertexBuffer;
+	std::vector<float> positionBuffer; // three floats per pos
+	std::vector<float> normalBuffer; // three floats per normal
+	std::vector<float> texcoordBuffer; // two floats per UV
 	uint32_t textureId;
 
 };

@@ -714,7 +714,7 @@ void MapPoly::AddVertex(Vertex const& vert)
 
 void MapPoly::Triangulate()
 {
-	const uint32_t faceNumVertices = this->verts.size();
+	uint32_t const faceNumVertices = (uint32_t)this->verts.size();
 
 	std::vector<Vertex> vertexBuffer;
 	vertexBuffer.reserve(this->verts.size() + 2); // pretty standard that we have a polygon of 4 vertices, and want to expand it to 6.
@@ -990,7 +990,7 @@ void MapPoly::CalculateTextureCoordinates(int const texWidth, int const texHeigh
 			}
 		}
 
-		// Normalize texture coordinates
+		// Normalize texture coordinates!
 		for (int i = 0; i < this->verts.size(); i++)
 		{
 			this->verts[i].tex[0] = this->verts[i].tex[0] - NearestU;
