@@ -99,7 +99,7 @@ MAPFile::Result MAPFile::ParseEntity(Entity& entity)
 				}
 				else
 				{
-					// Do not perform CSG union (useful for debugging)
+					// Do not perform CSG union
 					for (auto const& brush : brushes)
 					{
 						polygons.insert(polygons.end(), brush.polys.begin(), brush.polys.end());
@@ -367,9 +367,7 @@ MAPFile::Result MAPFile::ParseBrush(Brush& brush)
 
 MAPFile::Result MAPFile::ParseProperty(std::pair<PropertyName, PropertyValue>& prop)
 {
-	//
 	// Read name
-	//
 	Result result = GetString();
 
 	if (result != RESULT_SUCCEED)
@@ -514,9 +512,7 @@ MAPFile::Result MAPFile::ParseProperty(std::pair<PropertyName, PropertyValue>& p
 
 	memset(this->token, 0, MAX_TOKEN_LENGTH + 1);
 
-	//
 	// Read value
-	//
 	result = GetString();
 
 	if (result != RESULT_SUCCEED)
@@ -572,12 +568,7 @@ bool MAPFile::Load(const char* mapFilePath, std::vector<Entity>& entities, std::
 		entities.push_back(std::move(entity));
 	}
 
-	//
 	// Clean up and return
-	//
-	std::cout << "Entities:\t" << entities.size() << std::endl;
-	//std::cout << "Polygons:\t" << this->polygons << std::endl;
-	//std::cout << "Textures:\t" << this->textures << std::endl;
 
 	fclose(this->file);
 
@@ -728,9 +719,7 @@ MAPFile::Result MAPFile::GetToken()
 				return RESULT_FAIL;
 		}
 
-		//
 		// Check for token end
-		//
 		if (c == ' ' || c == '\n' || c == '\r')
 		{
 			break;
@@ -753,9 +742,7 @@ MAPFile::Result MAPFile::GetString()
 
 	memset(&this->token, 0, sizeof(this->token));
 
-	//
 	// Read first "
-	//
 	c = fgetc(this->file);
 	if (c == EOF)
 	{
@@ -765,9 +752,7 @@ MAPFile::Result MAPFile::GetString()
 			return RESULT_FAIL;
 	}
 
-	//
 	// Parse rest of string
-	//
 	while (i <= MAX_TOKEN_LENGTH)
 	{
 		c = fgetc(this->file);
@@ -776,9 +761,7 @@ MAPFile::Result MAPFile::GetString()
 			return RESULT_FAIL;
 		}
 
-		//
 		// Check for token end
-		//
 		if (c == '"')
 		{
 			bFinished = true;
@@ -807,49 +790,46 @@ MAPFile::Result MAPFile::GetString()
 
 MAPFile::Result MAPFile::SkipComments()
 {
-	// Skip comments
+	char buf[2];
+	while (true)
 	{
-		char buf[2];
-		while (true)
+		for (int i = 0; i < 2; i++)
 		{
-			for (int i = 0; i < 2; i++)
+			buf[i] = fgetc(this->file);
+			if (buf[i] == EOF)
 			{
-				buf[i] = fgetc(this->file);
-				if (buf[i] == EOF)
+				if (feof(this->file))
+					return RESULT_EOF;
+				else
+					return RESULT_FAIL;
+			}
+		}
+
+		if (strncmp("//", buf, 2) == 0)
+		{
+			while (true)
+			{// seek new line
+				char c = fgetc(this->file);
+				if (c == EOF)
 				{
 					if (feof(this->file))
 						return RESULT_EOF;
 					else
 						return RESULT_FAIL;
 				}
-			}
-
-			if (strncmp("//", buf, 2) == 0)
-			{
-				while (true)
-				{// seek new line
-					char c = fgetc(this->file);
-					if (c == EOF)
-					{
-						if (feof(this->file))
-							return RESULT_EOF;
-						else
-							return RESULT_FAIL;
-					}
-					if (c == '\n' || c == '\r')
-					{
-						break;
-					}
-
+				if (c == '\n' || c == '\r')
+				{
+					break;
 				}
+
 			}
-			else
-			{
-				// move back 2 characters, since we checked for comments previously and apparently 
-				ungetc(buf[1], this->file);
-				ungetc(buf[0], this->file);
-				break;
-			}
+		}
+		else
+		{
+			// move back 2 characters, since we checked for comments previously and apparently 
+			ungetc(buf[1], this->file);
+			ungetc(buf[0], this->file);
+			break;
 		}
 	}
 

@@ -114,9 +114,9 @@ void Poly::SortVerticesCW()
 
 	for (int i = 0; i < this->verts.size(); i++)
 		center = center + this->verts[i].p;
-	
+
 	center = center / static_cast<double>(this->verts.size());
-	
+
 	// Sort vertices
 	int numVertices = static_cast<int>(this->verts.size());
 	for (int i = 0; i < numVertices - 2; i++)

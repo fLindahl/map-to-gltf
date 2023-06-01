@@ -68,8 +68,7 @@ int main(int argc, char** argv)
             outputFilePath.replace_extension(".gltf");
     }
     
-    std::cout << "Converting: " << inputFilePath << " to "
-        << outputFilePath << "..." << std::endl;
+    // std::cout << "Converting: " << inputFilePath << " to " << outputFilePath << "..." << std::endl;
     
     MAPFile mapFile;
     mapFile.unify = args.get<bool>("unify", false);
@@ -283,7 +282,7 @@ int main(int argc, char** argv)
 
         try
         {
-            gltf::Save(doc, outputFilePath, false);
+            gltf::Save(doc, outputFilePath, produceGlb);
         }
         catch (const std::exception& e)
         {
