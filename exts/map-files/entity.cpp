@@ -2,11 +2,11 @@
 
 std::vector<Primitive> GeneratePrimitives(std::vector<Poly> polygons)
 {
-	for (size_t i = 0; i < polygons.size(); i++)
-	{
-		Poly& poly = polygons[i];
-		poly.Triangulate();	
-	}
+	//for (size_t i = 0; i < polygons.size(); i++)
+	//{
+	//	Poly& poly = polygons[i];
+	//	poly.Triangulate();	
+	//}
 
 	std::vector<Primitive> ret;
 
@@ -36,6 +36,7 @@ std::vector<Primitive> GeneratePrimitives(std::vector<Poly> polygons)
 			prim = &ret[it->second];
 		}
 
+		uint32_t indexOffset = (uint32_t)prim->positionBuffer.size() / 3;
 		// merge
 		for (size_t i = 0; i < poly.verts.size(); i++)
 		{
@@ -49,6 +50,32 @@ std::vector<Primitive> GeneratePrimitives(std::vector<Poly> polygons)
 			prim->texcoordBuffer.push_back((float)poly.verts[i].tex[0]);
 			prim->texcoordBuffer.push_back((float)poly.verts[i].tex[1]);
 		}
+
+		// Generate indices
+		uint32_t const faceNumVertices = (uint32_t)poly.verts.size();
+		
+		uint32_t i0 = indexOffset + 0;
+		uint32_t i1 = indexOffset + 1;
+		uint32_t i2 = indexOffset + 2;
+
+		prim->indexBuffer.push_back(i0);
+		prim->indexBuffer.push_back(i1);
+		prim->indexBuffer.push_back(i2);
+
+		uint32_t vert = faceNumVertices;
+		// loop over remaining vertices that make up any polygon that is > 3 vertices
+		while (vert > 3)
+		{
+			uint32_t vertexOffset = indexOffset + 3 + faceNumVertices - vert;
+			// fan triangulate
+			uint32_t i3 = vertexOffset;
+			prim->indexBuffer.push_back(i0);
+			prim->indexBuffer.push_back(i2);
+			prim->indexBuffer.push_back(i3);
+			vert--;
+			i2 = i3;
+		}
+
 
 		prim->min.Minimize(poly.min);
 		prim->max.Maximize(poly.max);

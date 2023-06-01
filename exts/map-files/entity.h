@@ -39,6 +39,7 @@ struct Primitive
 	std::vector<float> positionBuffer; // three floats per pos
 	std::vector<float> normalBuffer; // three floats per normal
 	std::vector<float> texcoordBuffer; // two floats per UV
+	std::vector<uint32_t> indexBuffer;
 	uint32_t textureId;
 
 };
