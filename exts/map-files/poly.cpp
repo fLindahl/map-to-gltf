@@ -1,14 +1,14 @@
 #include "map.h"
 #include <cstring>
 
-void MapPoly::AddVertex(Vertex const& vert)
+void Poly::AddVertex(Vertex const& vert)
 {
-	this->min.minimize(vert.p);
-	this->min.maximize(vert.p);
+	this->min.Minimize(vert.p);
+	this->min.Maximize(vert.p);
 	this->verts.push_back(vert);
 }
 
-void MapPoly::Triangulate()
+void Poly::Triangulate()
 {
 	uint32_t const faceNumVertices = (uint32_t)this->verts.size();
 
@@ -43,7 +43,7 @@ void MapPoly::Triangulate()
 	this->verts = vertexBuffer;
 }
 
-bool MapPoly::CalculatePlane()
+bool Poly::CalculatePlane()
 {
 	Vector3	centerOfMass;
 	double magnitude;
@@ -107,7 +107,7 @@ bool MapPoly::CalculatePlane()
 	return true;
 }
 
-void MapPoly::SortVerticesCW()
+void Poly::SortVerticesCW()
 {
 	// Calculate center of polygon
 	Vector3	center;
@@ -180,7 +180,7 @@ void MapPoly::SortVerticesCW()
 	}
 }
 
-void MapPoly::CalculateTextureCoordinates(int const texWidth, int const texHeight, Plane const texAxis[2], double const texScale[2])
+void Poly::CalculateTextureCoordinates(int const texWidth, int const texHeight, Plane const texAxis[2], double const texScale[2])
 {
 	// Calculate texture coordinates
 	for (int i = 0; i < this->verts.size(); i++)

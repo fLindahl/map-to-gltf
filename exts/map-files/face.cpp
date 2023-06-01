@@ -1,28 +1,28 @@
 #include "map.h"
 
-std::vector<MapPoly> DerivePolys(std::vector<MapFace> const& faces)
+std::vector<Poly> DerivePolys(std::vector<Face> const& faces)
 {
-	std::vector<MapPoly> ret;
+	std::vector<Poly> ret;
 
 	// Create the polygons from the faces
 	ret.resize(faces.size());
 
 	// Loop through faces and create polygons
-	MapPoly* pi = ret.data();
+	Poly* pi = ret.data();
 
 	for (size_t i = 0; i < faces.size() - 2; i++)
 	{
-		MapFace const* fi = &faces[i];
-		MapPoly* pj = pi + 1;
+		Face const* fi = &faces[i];
+		Poly* pj = pi + 1;
 
 		for (size_t j = i + 1; j < faces.size() - 1; j++)
 		{
-			MapFace const* fj = &faces[j];
-			MapPoly* pk = pj + 1;
+			Face const* fj = &faces[j];
+			Poly* pk = pj + 1;
 
 			for (size_t k = j + 1; k < faces.size(); k++)
 			{
-				MapFace const* fk = &faces[k];
+				Face const* fk = &faces[k];
 				Vector3 p;
 
 				if (fi->plane.GetIntersection(fj->plane, fk->plane, p))
@@ -30,7 +30,7 @@ std::vector<MapPoly> DerivePolys(std::vector<MapFace> const& faces)
 					size_t faceIndex;
 					for (faceIndex = 0; faceIndex < faces.size(); faceIndex++)
 					{
-						MapFace const* f = &faces[faceIndex];
+						Face const* f = &faces[faceIndex];
 
 						if (f->plane.ClassifyPoint(p) == Plane::eCP::FRONT)
 							break;

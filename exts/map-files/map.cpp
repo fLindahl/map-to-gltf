@@ -2,8 +2,9 @@
 // Filename: map.cpp
 //
 // Original Author:		Stefan Hajnoczi
-//
 // Original Date:		5 April 2001
+// 
+// Heavily modified by Fredrik Lindahl
 // 
 // Description: Code to load .MAP files.
 ////////////////////////////////////////////////////////////////////
@@ -23,15 +24,14 @@
 #include "../stb/stbimage.h"
 
 #include "map.h"
-#include "WAD3.h"
 
 
 // https://developer.valvesoftware.com/wiki/.map
 // https://quakewiki.org/wiki/Quake_Map_Format
 
-MAPFile::Result MAPFile::ParseEntity(MapEntity& entity)
+MAPFile::Result MAPFile::ParseEntity(Entity& entity)
 {
-	std::vector<MapBrush> brushes;
+	std::vector<Brush> brushes;
 	brushes.reserve(128);
 
 	Result result = GetToken();
@@ -76,7 +76,7 @@ MAPFile::Result MAPFile::ParseEntity(MapEntity& entity)
 		}
 		else if (c == '{')
 		{ // Brush
-			MapBrush brush;
+			Brush brush;
 
 			result = ParseBrush(brush);
 
@@ -92,10 +92,10 @@ MAPFile::Result MAPFile::ParseEntity(MapEntity& entity)
 		{ // End of entity
 			if (!brushes.empty())
 			{
-				std::vector<MapPoly> polygons;
+				std::vector<Poly> polygons;
 				if (this->unify)
 				{
-					std::vector<MapPoly> polygons = CSG::Union(brushes);
+					std::vector<Poly> polygons = CSG::Union(brushes);
 				}
 				else
 				{
@@ -133,7 +133,7 @@ MAPFile::Result MAPFile::ParseEntity(MapEntity& entity)
 }
 
 
-MAPFile::Result MAPFile::ParseFace(MapFace& face)
+MAPFile::Result MAPFile::ParseFace(Face& face)
 {
 	// Read plane definition
 	Result result;
@@ -188,7 +188,7 @@ MAPFile::Result MAPFile::ParseFace(MapFace& face)
 				int x,y,n;
 				if (stbi_info(fullRelPath.c_str(), &x, &y, &n))
 				{
-					MapTexture texture;
+					Texture texture;
 					texture.id = static_cast<uint32_t>(this->mapTextures->size());
 					texture.width = x;
 					texture.height = y;
@@ -265,7 +265,7 @@ MAPFile::Result MAPFile::ParseFace(MapFace& face)
 }
 
 
-MAPFile::Result MAPFile::ParseBrush(MapBrush& brush)
+MAPFile::Result MAPFile::ParseBrush(Brush& brush)
 {
 	// Read {
 	Result result = GetToken();
@@ -283,7 +283,7 @@ MAPFile::Result MAPFile::ParseBrush(MapBrush& brush)
 	}
 
 	// Parse brush
-	std::vector<MapFace> faces;
+	std::vector<Face> faces;
 
 	while (true)
 	{
@@ -300,7 +300,7 @@ MAPFile::Result MAPFile::ParseBrush(MapBrush& brush)
 
 		if (c == '(')
 		{ // Face
-			MapFace face;
+			Face face;
 
 			result = ParseFace(face);
 
@@ -331,7 +331,7 @@ MAPFile::Result MAPFile::ParseBrush(MapBrush& brush)
 		return RESULT_FAIL;
 	}
 
-	std::vector<MapPoly> polys = DerivePolys(faces);
+	std::vector<Poly> polys = DerivePolys(faces);
 
 	if (polys.size() != faces.size())
 	{
@@ -342,8 +342,8 @@ MAPFile::Result MAPFile::ParseBrush(MapBrush& brush)
 	// Sort vertices and calculate texture coordinates for every polygon
 	for (size_t i = 0; i < polys.size(); i++)
 	{
-		MapPoly& poly = polys[i];
-		MapFace const& face = faces[i];
+		Poly& poly = polys[i];
+		Face const& face = faces[i];
 
 		poly.plane = face.plane;
 		poly.textureId = face.textureId;
@@ -530,7 +530,7 @@ MAPFile::Result MAPFile::ParseProperty(std::pair<PropertyName, PropertyValue>& p
 }
 
 
-bool MAPFile::Load(const char* mapFilePath, std::vector<MapEntity>& entities, std::vector<MapTexture>& textures)
+bool MAPFile::Load(const char* mapFilePath, std::vector<Entity>& entities, std::vector<Texture>& textures)
 {
 	// Check if parameters are valid
 	if (mapFilePath == NULL)
@@ -556,7 +556,7 @@ bool MAPFile::Load(const char* mapFilePath, std::vector<MapEntity>& entities, st
 	{
 		SkipComments();
 
-		MapEntity entity;
+		Entity entity;
 		Result result = ParseEntity(entity);
 
 		if (result == RESULT_EOF)

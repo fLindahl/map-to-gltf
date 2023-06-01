@@ -1,15 +1,7 @@
 #pragma once
-////////////////////////////////////////////////////////////////////
-// Constants
-////////////////////////////////////////////////////////////////////
 
 const unsigned int MAX_TOKEN_LENGTH = 512;
 const unsigned int MAX_TEXTURE_LENGTH = 16;
-
-
-////////////////////////////////////////////////////////////////////
-// Includes
-////////////////////////////////////////////////////////////////////
 
 #include <iostream>
 #include <fstream>
@@ -20,11 +12,6 @@ const unsigned int MAX_TEXTURE_LENGTH = 16;
 #include "math.h"
 #include "entity.h"
 #include "brush.h"
-
-
-////////////////////////////////////////////////////////////////////
-// Classes
-////////////////////////////////////////////////////////////////////
 
 class MAPFile
 {
@@ -44,15 +31,15 @@ private:
     Result GetString();
     Result SkipComments();
 
-    Result ParseEntity(MapEntity& entity);
+    Result ParseEntity(Entity& entity);
     Result ParseProperty(std::pair<PropertyName, PropertyValue>& prop);
-    Result ParseBrush(MapBrush& brush);
-    Result ParseFace(MapFace& face);
+    Result ParseBrush(Brush& brush);
+    Result ParseFace(Face& face);
     Result ParseVector(Vector3& v_);
     Result ParsePlane(Plane& p_);
 
-    std::vector<MapEntity>* mapEntities;
-    std::vector<MapTexture>* mapTextures;
+    std::vector<Entity>* mapEntities;
+    std::vector<Texture>* mapTextures;
     std::unordered_map<std::string, uint32_t> textureTable;
     std::vector<std::string> textureLibs;
 
@@ -61,5 +48,5 @@ public:
     bool unify;
     std::string textureRoot;
 
-    bool Load(const char* pcFile_, std::vector<MapEntity>& entities, std::vector<MapTexture>& textures);
+    bool Load(const char* pcFile_, std::vector<Entity>& entities, std::vector<Texture>& textures);
 };

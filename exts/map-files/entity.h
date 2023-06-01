@@ -9,7 +9,7 @@ public:
 	double	tex[ 2 ];
 };
 
-struct MapTexture
+struct Texture
 {
 	uint32_t id;
 	uint32_t width;
@@ -17,7 +17,7 @@ struct MapTexture
 	std::string name;
 };
 
-struct MapPoly
+struct Poly
 {
 	Vector3 min, max;
 	std::vector<Vertex> verts;
@@ -44,16 +44,16 @@ struct Primitive
 };
 
 // Merges all polygons that share the same texture
-std::vector<Primitive> GeneratePrimitives(std::vector<MapPoly> polygons);
+std::vector<Primitive> GeneratePrimitives(std::vector<Poly> polygons);
 
 
 using PropertyName = std::string;
 using PropertyValue = std::string;
 
-struct MapEntity
+struct Entity
 {
 	std::map<PropertyName, PropertyValue> properties;
-	std::vector<MapPoly> polys;
+	std::vector<Poly> polys;
 	std::vector<Primitive> primitives;
 	Vector3 bboxMin;
 	Vector3 bboxMax;

@@ -20,14 +20,14 @@ class Vector3
 public:
 	double x, y, z;
 
-	void minimize(Vector3 const& rhs)
+	void Minimize(Vector3 const& rhs)
 	{
 		x = x < rhs.x ? x : rhs.x;
 		y = y < rhs.y ? y : rhs.y;
 		z = z < rhs.z ? z : rhs.z;
 	}
 
-	void maximize(Vector3 const& rhs)
+	void Maximize(Vector3 const& rhs)
 	{
 		x = x > rhs.x ? x : rhs.x;
 		y = y > rhs.y ? y : rhs.y;

@@ -1,7 +1,7 @@
 #pragma once
 #include <cstdint>
 
-struct MapFace
+struct Face
 {
 	Plane plane;
 	Plane texAxis[2];
@@ -9,17 +9,17 @@ struct MapFace
 	uint32_t textureId;
 };
 
-std::vector<MapPoly> DerivePolys(std::vector<MapFace> const& faces);
+std::vector<Poly> DerivePolys(std::vector<Face> const& faces);
 
-struct MapBrush
+struct Brush
 {
 	Vector3 min, max;
-	std::vector<MapPoly> polys;
+	std::vector<Poly> polys;
 	
 	void CalculateAABB();
 };
 
 namespace CSG
 {
-	std::vector<MapPoly> Union(std::vector<MapBrush> const& brushes);
+	std::vector<Poly> Union(std::vector<Brush> const& brushes);
 }

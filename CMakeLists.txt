@@ -27,8 +27,6 @@ SET(files_exts_map_files
 	exts/map-files/map.h
 	exts/map-files/math.h
 	exts/map-files/poly.cpp
-	exts/map-files/WAD3.cpp
-	exts/map-files/WAD3.h
 )
 
 SET(files_exts_fx

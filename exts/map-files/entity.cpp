@@ -1,10 +1,10 @@
 #include "map.h"
 
-std::vector<Primitive> GeneratePrimitives(std::vector<MapPoly> polygons)
+std::vector<Primitive> GeneratePrimitives(std::vector<Poly> polygons)
 {
 	for (size_t i = 0; i < polygons.size(); i++)
 	{
-		MapPoly& poly = polygons[i];
+		Poly& poly = polygons[i];
 		poly.Triangulate();	
 	}
 
@@ -15,7 +15,7 @@ std::vector<Primitive> GeneratePrimitives(std::vector<MapPoly> polygons)
 
 	for (size_t i = 0; i < polygons.size(); i++)
 	{
-		MapPoly const& poly = polygons[i];
+		Poly const& poly = polygons[i];
 
 		Primitive* prim;
 
@@ -50,8 +50,8 @@ std::vector<Primitive> GeneratePrimitives(std::vector<MapPoly> polygons)
 			prim->texcoordBuffer.push_back((float)poly.verts[i].tex[1]);
 		}
 
-		prim->min.minimize(poly.min);
-		prim->max.maximize(poly.max);
+		prim->min.Minimize(poly.min);
+		prim->max.Maximize(poly.max);
 	}
 
 	return ret;

@@ -11,11 +11,11 @@ void PrintHelp()
 {
     std::cout <<
         "Usage: mtg [path to input file] [args]\n"
-        "Available args:"
+        "Available args:\n"
         "--help, -h \t Print cli argument information.\n"
         "-glb \t File should be exported into GLB format.\n"
         "-o [file]\t Path to output file. If not specified, the file will be placed adjacent to the input file but with different extension.\n"
-        "-unify\t Perform CSG union between all brushes of an entity. This reduces the amount of ouput meshes and polygons.\n"
+        "-unify\t Perform CSG union between all brushes of an entity. This reduces the amount of output meshes and polygons.\n"
         "-texroot [folder name]\t Specify a texture root folder relative to cwd (default: \"textures\")\n"
         "-copyright [copyright notice]\t Specify a copyright notice that will be embeded in the exported file.\n"
         "-filter\t Use linear filtering for all textures.\n"
@@ -75,8 +75,8 @@ int main(int argc, char** argv)
     mapFile.unify = args.get<bool>("unify", false);
     mapFile.textureRoot = args.get<std::string>("texRoot", "textures");
 
-    std::vector<MapEntity> entities;
-    std::vector<MapTexture> textures;
+    std::vector<Entity> entities;
+    std::vector<Texture> textures;
     std::string inputFilePathString = inputFilePath.string();
     bool loaded = mapFile.Load(inputFilePathString.c_str(), entities, textures);
     if (loaded)

@@ -1,25 +1,26 @@
 #include "map.h"
 
-void MapBrush::CalculateAABB()
+void Brush::CalculateAABB()
 {
     min = { 1e30f, 1e30f, 1e30f};
     max = {-1e30f,-1e30f,-1e30f };
 
-    for (MapPoly const& poly : this->polys)
+    for (Poly const& poly : this->polys)
     {
-        min.minimize(poly.min);
-        max.maximize(poly.max);
+        min.Minimize(poly.min);
+        max.Maximize(poly.max);
     }
 }
 
-std::vector<MapPoly> CSG::Union(std::vector<MapBrush> const& brushes)
+std::vector<Poly> CSG::Union(std::vector<Brush> const& brushes)
 {
     // TODO: Currently not implemented
     abort(); 
 
-    std::vector<MapPoly> ret;
+    std::vector<Poly> ret;
 
-    /*
+
+    /* ORIGINAL UNION CODE - CAN BE USED AS REFERENCE
     Brush* pClippedList = CopyList();
     Brush* pClip = pClippedList;
     Brush* pBrush = NULL;
