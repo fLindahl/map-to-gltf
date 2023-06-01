@@ -47,6 +47,7 @@ public:
 
     bool unify;
     std::string textureRoot;
+    float meshScale = 1.0f;
 
     bool Load(const char* pcFile_, std::vector<Entity>& entities, std::vector<Texture>& textures);
 };

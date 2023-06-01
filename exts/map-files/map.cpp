@@ -129,6 +129,23 @@ MAPFile::Result MAPFile::ParseEntity(Entity& entity)
 
 	entity.primitives = GeneratePrimitives(entity.polys);
 
+	if (this->meshScale != 1.0f)
+	{
+		for (auto& primitive : entity.primitives)
+		{
+			for (size_t i = 0; i < primitive.positionBuffer.size(); i++)
+			{
+				primitive.positionBuffer[i] *= this->meshScale;
+			}
+			primitive.max.x *= this->meshScale;
+			primitive.max.y *= this->meshScale;
+			primitive.max.z *= this->meshScale;
+			primitive.min.x *= this->meshScale;
+			primitive.min.y *= this->meshScale;
+			primitive.min.z *= this->meshScale;
+		}
+	}
+
 	return RESULT_SUCCEED;
 }
 

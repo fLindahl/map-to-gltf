@@ -4,7 +4,7 @@
 void Poly::AddVertex(Vertex const& vert)
 {
 	this->min.Minimize(vert.p);
-	this->min.Maximize(vert.p);
+	this->max.Maximize(vert.p);
 	this->verts.push_back(vert);
 }
 

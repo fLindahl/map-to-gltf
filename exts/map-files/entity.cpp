@@ -66,9 +66,8 @@ std::vector<Primitive> GeneratePrimitives(std::vector<Poly> polygons)
 		// loop over remaining vertices that make up any polygon that is > 3 vertices
 		while (vert > 3)
 		{
-			uint32_t vertexOffset = indexOffset + 3 + faceNumVertices - vert;
 			// fan triangulate
-			uint32_t i3 = vertexOffset;
+			uint32_t i3 = indexOffset + 3 + faceNumVertices - vert;
 			prim->indexBuffer.push_back(i0);
 			prim->indexBuffer.push_back(i2);
 			prim->indexBuffer.push_back(i3);

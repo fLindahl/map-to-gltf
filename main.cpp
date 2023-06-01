@@ -19,6 +19,7 @@ void PrintHelp()
         "-texroot [folder name]\t Specify a texture root folder relative to cwd (default: \"textures\")\n"
         "-copyright [copyright notice]\t Specify a copyright notice that will be embeded in the exported file.\n"
         "-filter\t Use linear filtering for all textures.\n"
+        "-scale [float]\t Bake given scale into meshes\n"
         << std::endl;
 }
 
@@ -71,6 +72,7 @@ int main(int argc, char** argv)
     // std::cout << "Converting: " << inputFilePath << " to " << outputFilePath << "..." << std::endl;
     
     MAPFile mapFile;
+    mapFile.meshScale = args.get<float>("scale", 1.0f);
     mapFile.unify = args.get<bool>("unify", false);
     mapFile.textureRoot = args.get<std::string>("texRoot", "textures");
 
@@ -134,6 +136,10 @@ int main(int argc, char** argv)
         size_t normalOffset = 0;
         size_t texOffset = 0;
         size_t indexOffset = 0;
+        size_t isize = 0;
+        size_t psize = 0;
+        size_t nsize = 0;
+        size_t tsize = 0;
         size_t vertexBufferSize = 0;
         for (auto const& entity : entities)
         {
@@ -146,6 +152,11 @@ int main(int argc, char** argv)
                 normalOffset += posSize;
                 texOffset += posSize + normSize;
                 indexOffset += posSize + normSize + texSize;
+
+                psize += posSize;
+                nsize += normSize;
+                tsize += texSize;
+                isize += indexSize;
 
                 vertexBufferSize += posSize;
                 vertexBufferSize += normSize;
@@ -167,6 +178,46 @@ int main(int argc, char** argv)
         int32_t const vertexBufferIndex = (int32_t)doc.buffers.size();
         doc.buffers.push_back(std::move(vertexBuffer));
 
+        gltf::BufferView posView;
+        posView.buffer = vertexBufferIndex;
+        posView.byteOffset = (uint32_t)posOffset;
+        posView.byteLength = (uint32_t)psize;
+        posView.byteStride = sizeof(float) * 3;
+        posView.target = gltf::BufferView::TargetType::ArrayBuffer;
+        int32_t const posViewIndex = (int32_t)doc.bufferViews.size();
+        doc.bufferViews.push_back(posView);
+
+        gltf::BufferView normView;
+        normView.buffer = vertexBufferIndex;
+        normView.byteOffset = (uint32_t)normalOffset;
+        normView.byteLength = (uint32_t)nsize;
+        normView.byteStride = sizeof(float) * 3;
+        normView.target = gltf::BufferView::TargetType::ArrayBuffer;
+        int32_t const normViewIndex = (int32_t)doc.bufferViews.size();
+        doc.bufferViews.push_back(normView);
+
+        gltf::BufferView texView;
+        texView.buffer = vertexBufferIndex;
+        texView.byteOffset = (uint32_t)texOffset;
+        texView.byteLength = (uint32_t)tsize;
+        texView.byteStride = sizeof(float) * 2;
+        texView.target = gltf::BufferView::TargetType::ArrayBuffer;
+        int32_t const texViewIndex = (int32_t)doc.bufferViews.size();
+        doc.bufferViews.push_back(texView);
+
+        gltf::BufferView indexView;
+        indexView.buffer = vertexBufferIndex;
+        indexView.byteOffset = (uint32_t)indexOffset;
+        indexView.byteLength = (uint32_t)isize;
+        indexView.target = gltf::BufferView::TargetType::ElementArrayBuffer;
+        int32_t const indexViewIndex = (int32_t)doc.bufferViews.size();
+        doc.bufferViews.push_back(indexView);
+
+        size_t accessor_posOffset = 0;
+        size_t accessor_normalOffset = 0;
+        size_t accessor_texOffset = 0;
+        size_t accessor_indexOffset = 0;
+
         for (auto const& entity : entities)
         {
             gltf::Node node;
@@ -187,6 +238,7 @@ int main(int argc, char** argv)
 
                 gltf::Mesh mesh;
 
+                uint32_t indexShift = 0;
                 for (size_t i = 0; i < entity.primitives.size(); i++)
                 {
                     Primitive const& primitive = entity.primitives[i];
@@ -200,54 +252,23 @@ int main(int argc, char** argv)
 
                     // shift and write indices
                     uint32_t* indexBuffer = (uint32_t*)(buffer + indexOffset);
-                    uint32_t const indexShift = posOffset / (sizeof(float) * 3);
                     for (size_t i = 0; i < primitive.indexBuffer.size(); i++)
                     {
-                        indexBuffer[i] = primitive.indexBuffer[i] + indexShift;
+                        indexBuffer[i] = primitive.indexBuffer[i];
                     }
-
-                    gltf::BufferView posView;
-                    posView.buffer = vertexBufferIndex;
-                    posView.byteOffset = (uint32_t)posOffset;
-                    posView.byteLength = (uint32_t)posNumBytes;
-                    posView.target = gltf::BufferView::TargetType::ArrayBuffer;
-                    int32_t const posViewIndex = (int32_t)doc.bufferViews.size();
-                    doc.bufferViews.push_back(posView);
-
-                    gltf::BufferView normView;
-                    normView.buffer = vertexBufferIndex;
-                    normView.byteOffset = (uint32_t)normalOffset;
-                    normView.byteLength = (uint32_t)normNumBytes;
-                    normView.target = gltf::BufferView::TargetType::ArrayBuffer;
-                    int32_t const normViewIndex = (int32_t)doc.bufferViews.size();
-                    doc.bufferViews.push_back(normView);
-
-                    gltf::BufferView texView;
-                    texView.buffer = vertexBufferIndex;
-                    texView.byteOffset = (uint32_t)texOffset;
-                    texView.byteLength = (uint32_t)texNumBytes;
-                    texView.target = gltf::BufferView::TargetType::ArrayBuffer;
-                    int32_t const texViewIndex = (int32_t)doc.bufferViews.size();
-                    doc.bufferViews.push_back(texView);
-
-                    gltf::BufferView indexView;
-                    indexView.buffer = vertexBufferIndex;
-                    indexView.byteOffset = (uint32_t)indexOffset;
-                    indexView.byteLength = (uint32_t)indexNumBytes;
-                    indexView.target = gltf::BufferView::TargetType::ElementArrayBuffer;
-                    int32_t const indexViewIndex = (int32_t)doc.bufferViews.size();
-                    doc.bufferViews.push_back(indexView);
-
+                    indexShift += (uint32_t)primitive.indexBuffer.size();
+                   
                     posOffset += posNumBytes;
                     normalOffset += normNumBytes;
                     texOffset += texNumBytes;
                     indexOffset += indexNumBytes;
-
+                    
                     gltf::Accessor posAccessor;
                     posAccessor.min = { (float)primitive.min.x, (float)primitive.min.y, (float)primitive.min.z };
                     posAccessor.max = { (float)primitive.max.x, (float)primitive.max.y, (float)primitive.max.z };
                     posAccessor.bufferView = posViewIndex;
                     posAccessor.count = (uint32_t)(primitive.positionBuffer.size() / 3);
+                    posAccessor.byteOffset = accessor_posOffset;
                     posAccessor.type = gltf::Accessor::Type::Vec3;
                     posAccessor.componentType = gltf::Accessor::ComponentType::Float;
 
@@ -255,18 +276,21 @@ int main(int argc, char** argv)
                     normalAccessor.bufferView = normViewIndex;
                     normalAccessor.count = (uint32_t)(primitive.normalBuffer.size() / 3);
                     normalAccessor.type = gltf::Accessor::Type::Vec3;
+                    normalAccessor.byteOffset = accessor_normalOffset;
                     normalAccessor.componentType = gltf::Accessor::ComponentType::Float;
 
                     gltf::Accessor texAccessor;
                     texAccessor.bufferView = texViewIndex;
                     texAccessor.count = (uint32_t)(primitive.texcoordBuffer.size() / 2);
                     texAccessor.type = gltf::Accessor::Type::Vec2;
+                    texAccessor.byteOffset = accessor_texOffset;
                     texAccessor.componentType = gltf::Accessor::ComponentType::Float;
 
                     gltf::Accessor indexAccessor;
                     indexAccessor.bufferView = indexViewIndex;
                     indexAccessor.count = (uint32_t)(primitive.indexBuffer.size());
                     indexAccessor.type = gltf::Accessor::Type::Scalar;
+                    indexAccessor.byteOffset = accessor_indexOffset;
                     indexAccessor.componentType = gltf::Accessor::ComponentType::UnsignedInt;
 
                     int32_t const posAccessorIndex = (int32_t)doc.accessors.size();
@@ -290,6 +314,11 @@ int main(int argc, char** argv)
                     };
 
                     mesh.primitives.push_back(gltfPrimitive);
+
+                    accessor_posOffset += posNumBytes;
+                    accessor_normalOffset += normNumBytes;
+                    accessor_texOffset += texNumBytes;
+                    accessor_indexOffset += indexNumBytes;
                 }
 
                 int32_t const meshIndex = (int32_t)doc.meshes.size();
