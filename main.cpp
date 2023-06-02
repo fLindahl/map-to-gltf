@@ -213,10 +213,10 @@ int main(int argc, char** argv)
         int32_t const indexViewIndex = (int32_t)doc.bufferViews.size();
         doc.bufferViews.push_back(indexView);
 
-        size_t accessor_posOffset = 0;
-        size_t accessor_normalOffset = 0;
-        size_t accessor_texOffset = 0;
-        size_t accessor_indexOffset = 0;
+        size_t accessorPosOffset = 0;
+        size_t accessorNormalOffset = 0;
+        size_t accessorTexOffset = 0;
+        size_t accessorIndexOffset = 0;
 
         for (auto const& entity : entities)
         {
@@ -238,7 +238,6 @@ int main(int argc, char** argv)
 
                 gltf::Mesh mesh;
 
-                uint32_t indexShift = 0;
                 for (size_t i = 0; i < entity.primitives.size(); i++)
                 {
                     Primitive const& primitive = entity.primitives[i];
@@ -249,15 +248,8 @@ int main(int argc, char** argv)
                     std::memcpy(buffer + posOffset, primitive.positionBuffer.data(), posNumBytes);
                     std::memcpy(buffer + normalOffset, primitive.normalBuffer.data(), normNumBytes);
                     std::memcpy(buffer + texOffset, primitive.texcoordBuffer.data(), texNumBytes);
-
-                    // shift and write indices
-                    uint32_t* indexBuffer = (uint32_t*)(buffer + indexOffset);
-                    for (size_t i = 0; i < primitive.indexBuffer.size(); i++)
-                    {
-                        indexBuffer[i] = primitive.indexBuffer[i];
-                    }
-                    indexShift += (uint32_t)primitive.indexBuffer.size();
-                   
+                    std::memcpy(buffer + indexOffset, primitive.indexBuffer.data(), indexNumBytes);
+                    
                     posOffset += posNumBytes;
                     normalOffset += normNumBytes;
                     texOffset += texNumBytes;
@@ -268,7 +260,7 @@ int main(int argc, char** argv)
                     posAccessor.max = { (float)primitive.max.x, (float)primitive.max.y, (float)primitive.max.z };
                     posAccessor.bufferView = posViewIndex;
                     posAccessor.count = (uint32_t)(primitive.positionBuffer.size() / 3);
-                    posAccessor.byteOffset = accessor_posOffset;
+                    posAccessor.byteOffset = accessorPosOffset;
                     posAccessor.type = gltf::Accessor::Type::Vec3;
                     posAccessor.componentType = gltf::Accessor::ComponentType::Float;
 
@@ -276,21 +268,21 @@ int main(int argc, char** argv)
                     normalAccessor.bufferView = normViewIndex;
                     normalAccessor.count = (uint32_t)(primitive.normalBuffer.size() / 3);
                     normalAccessor.type = gltf::Accessor::Type::Vec3;
-                    normalAccessor.byteOffset = accessor_normalOffset;
+                    normalAccessor.byteOffset = accessorNormalOffset;
                     normalAccessor.componentType = gltf::Accessor::ComponentType::Float;
 
                     gltf::Accessor texAccessor;
                     texAccessor.bufferView = texViewIndex;
                     texAccessor.count = (uint32_t)(primitive.texcoordBuffer.size() / 2);
                     texAccessor.type = gltf::Accessor::Type::Vec2;
-                    texAccessor.byteOffset = accessor_texOffset;
+                    texAccessor.byteOffset = accessorTexOffset;
                     texAccessor.componentType = gltf::Accessor::ComponentType::Float;
 
                     gltf::Accessor indexAccessor;
                     indexAccessor.bufferView = indexViewIndex;
                     indexAccessor.count = (uint32_t)(primitive.indexBuffer.size());
                     indexAccessor.type = gltf::Accessor::Type::Scalar;
-                    indexAccessor.byteOffset = accessor_indexOffset;
+                    indexAccessor.byteOffset = accessorIndexOffset;
                     indexAccessor.componentType = gltf::Accessor::ComponentType::UnsignedInt;
 
                     int32_t const posAccessorIndex = (int32_t)doc.accessors.size();
@@ -315,10 +307,10 @@ int main(int argc, char** argv)
 
                     mesh.primitives.push_back(gltfPrimitive);
 
-                    accessor_posOffset += posNumBytes;
-                    accessor_normalOffset += normNumBytes;
-                    accessor_texOffset += texNumBytes;
-                    accessor_indexOffset += indexNumBytes;
+                    accessorPosOffset += posNumBytes;
+                    accessorNormalOffset += normNumBytes;
+                    accessorTexOffset += texNumBytes;
+                    accessorIndexOffset += indexNumBytes;
                 }
 
                 int32_t const meshIndex = (int32_t)doc.meshes.size();
