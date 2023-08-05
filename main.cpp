@@ -16,10 +16,13 @@ void PrintHelp()
         "-glb \t File should be exported into GLB format.\n"
         "-o [file]\t Path to output file. If not specified, the file will be placed adjacent to the input file but with different extension.\n"
         "-unify\t Perform CSG union between all brushes of an entity. This reduces the amount of output meshes and polygons.\n"
-        "-texroot [folder name]\t Specify a texture root folder relative to cwd (default: \"textures\")\n"
         "-copyright [copyright notice]\t Specify a copyright notice that will be embeded in the exported file.\n"
         "-filter\t Use linear filtering for all textures.\n"
-        "-scale [float]\t Bake given scale into meshes, Default is 4.0, which makes 64 units to correspond to 1.6f units.\n"
+        "-scale [float]\t Bake given scale into meshes, Default is 2.0, which makes 64 MAP units to correspond to 1.0f GLTF units (meters).\n"
+        "-lh\t Export using left-handed coordinate system instead of GLTFs default right-handed system\n"
+        "-texroot [folder name]\t Specify a texture root folder relative to cwd (default: \"textures\")\n"
+        "\t\t\t Note that your cwd needs to be the same as the output directory\n"
+        "\t\t\t for the gltf to be able to find the correct path.\n\n"
         << std::endl;
 }
 
@@ -72,9 +75,10 @@ int main(int argc, char** argv)
     // std::cout << "Converting: " << inputFilePath << " to " << outputFilePath << "..." << std::endl;
     
     MAPFile mapFile;
-    mapFile.meshScale = args.get<float>("scale", 4.0f);
+    mapFile.meshScale = args.get<float>("scale", 2.0f);
+    mapFile.useLH = args.get<bool>("lh", false);
     mapFile.unify = args.get<bool>("unify", false);
-    mapFile.textureRoot = args.get<std::string>("texRoot", "textures");
+    mapFile.textureRoot = args.get<std::string>("texroot", "textures");
 
     std::vector<Entity> entities;
     std::vector<Texture> textures;

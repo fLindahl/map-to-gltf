@@ -146,6 +146,31 @@ MAPFile::Result MAPFile::ParseEntity(Entity& entity)
 		}
 	}
 
+	if (!this->useLH)
+	{
+		for (auto& primitive : entity.primitives)
+		{
+			// Flip x axis
+			for (size_t i = 0; i < primitive.positionBuffer.size(); i += 3)
+			{
+				primitive.positionBuffer[i] *= -1;
+				primitive.normalBuffer[i] *= -1;
+			}
+			primitive.max.x *= -1;
+			primitive.min.x *= -1;
+			
+			// Flip triangle winding order by reversing index buffer
+			std::vector<uint32_t> tempIndexBuffer(primitive.indexBuffer.size());
+			size_t const lastIndex = primitive.indexBuffer.size() - 1;
+			for (size_t i = 0; i < primitive.indexBuffer.size(); i++)
+			{
+				tempIndexBuffer[i] = primitive.indexBuffer[lastIndex - i];
+			}
+			primitive.indexBuffer = std::move(tempIndexBuffer);
+		}
+
+	}
+
 	return RESULT_SUCCEED;
 }
 
