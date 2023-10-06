@@ -6,7 +6,9 @@ stefanha@gmail.com
 
 Licensed under the MIT License, see LICENSE file for details.
 
-Foreword from 2013
+fLindahl: This version of the library is heavily edited and modified to suit the map-to-gltf library.
+
+Stefans Foreword from 2013
 ------------------
 This article and source code was written in 2001 but I still get emails asking
 for it.  I cannot answer questions about it because I haven't worked with .MAP
