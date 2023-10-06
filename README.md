@@ -24,6 +24,8 @@ Currently only parses and works with Valves "220" format.
 
 This tool has been built and tested with Trenchbroom-produced files.
 
+Pull-request are warmly welcome!
+
 Missing features:
 - No support for WAD files	
 - No support for CSG union between polygons *yet*. It does however merge polygons within a single entity based on their materials.
