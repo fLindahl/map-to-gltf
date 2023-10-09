@@ -36,6 +36,7 @@ SET(files_exts_fx
 
 SET(files_exts_stb
 	exts/stb/stbimage.h
+	exts/stb/stb_image_write.h
 )
 
 SOURCE_GROUP("mtg" FILES ${files_map_to_gltf})

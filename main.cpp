@@ -7,6 +7,10 @@
 #include "exts/map-files/map.h"
 #include <assert.h>
 
+#define STB_IMAGE_WRITE_IMPLEMENTATION
+#include "exts/stb/stb_image_write.h"
+#include "exts/stb/stbimage.h"
+
 void PrintHelp()
 {
     std::cout <<
@@ -19,9 +23,10 @@ void PrintHelp()
         "-copyright [copyright notice]\t Specify a copyright notice that will be embeded in the exported file.\n"
         "-filter\t Use linear filtering for all textures.\n"
         "-scale [float]\t Bake given scale into meshes, Default is 1.0, which makes 64 MAP units to correspond to 1.0f GLTF units (meters).\n"
-        "-lh\t Export using left-handed coordinate system instead of GLTFs default right-handed system\n"
-        "-texroot [folder name]\t Specify a texture root folder relative to cwd (default: \"textures\")\n"
-        "\t\t\t Note that your cwd needs to be the same as the output directory\n"
+        "-lh\t Export using left-handed coordinate system instead of GLTFs default right-handed system.\n"
+        "-embed\t Embed textures in the output.\n"
+        "-texroot [folder name]\t Specify a texture root folder relative to cwd (default: \"textures\").\n"
+        "\t\t\t Note that your cwd needs to be the same as the output directory.\n"
         "\t\t\t for the gltf to be able to find the correct path.\n\n"
         << std::endl;
 }
@@ -80,6 +85,8 @@ int main(int argc, char** argv)
     mapFile.unify = args.get<bool>("unify", false);
     mapFile.textureRoot = args.get<std::string>("texroot", "textures");
 
+    bool embedImages = args.get<bool>("embed", false);
+
     std::vector<Entity> entities;
     std::vector<Texture> textures;
     std::string inputFilePathString = inputFilePath.string();
@@ -95,45 +102,6 @@ int main(int argc, char** argv)
         gltf::Scene scene;
         scene.name = "";
             
-        int32_t samplerDefaultId = 0;
-        { // setup samplers
-            gltf::Sampler samplerDefault;
-            bool filter = args.get<bool>("filter", false);
-            samplerDefault.magFilter = filter ? gltf::Sampler::MagFilter::Linear : gltf::Sampler::MagFilter::Nearest;
-            samplerDefault.minFilter = filter ? gltf::Sampler::MinFilter::LinearMipMapLinear : gltf::Sampler::MinFilter::Nearest;
-            samplerDefaultId = (int32_t)doc.samplers.size();
-            doc.samplers.push_back(std::move(samplerDefault));
-        }
-
-        for (auto const& texture : textures)
-        {
-            gltf::Material mat;
-            gltf::Texture tex;
-            
-            gltf::Image img;
-            img.uri = mapFile.textureRoot + "/" + texture.name;
-            int32_t const imgId = (int32_t)doc.images.size();
-
-#ifdef _DEBUG
-            int32_t const texId = (int32_t)doc.textures.size();
-            int32_t const matId = (int32_t)doc.materials.size();
-            // Textures and materials in the gltf should be adjacent to the map textures
-            assert(imgId == texture.id && texId == texture.id && matId == texture.id);
-#endif
-
-            tex.source = imgId;
-            tex.name = std::filesystem::path(texture.name).replace_extension("").string();
-            tex.sampler = samplerDefaultId;
-            
-            doc.images.push_back(std::move(img));
-            doc.textures.push_back(std::move(tex));
-
-            mat.pbrMetallicRoughness.baseColorTexture = gltf::Material::Texture{ .index{(int32_t)texture.id} };
-            mat.name = texture.name;
-            mat.doubleSided = false;
-            doc.materials.push_back(std::move(mat));
-        }
-
         gltf::Buffer meshBuffer;
 
         size_t posOffset = 0;
@@ -332,6 +300,104 @@ int main(int argc, char** argv)
             doc.nodes.push_back(std::move(node));
             scene.nodes.push_back(nodeId);
         }
+
+        int32_t samplerDefaultId = 0;
+        { // setup samplers
+            gltf::Sampler samplerDefault;
+            bool filter = args.get<bool>("filter", false);
+            samplerDefault.magFilter = filter ? gltf::Sampler::MagFilter::Linear : gltf::Sampler::MagFilter::Nearest;
+            samplerDefault.minFilter = filter ? gltf::Sampler::MinFilter::LinearMipMapLinear : gltf::Sampler::MinFilter::Nearest;
+            samplerDefaultId = (int32_t)doc.samplers.size();
+            doc.samplers.push_back(std::move(samplerDefault));
+        }
+
+        gltf::Buffer* imgBuffer = nullptr; // only used if embedded images
+        uint32_t imgBufferId;
+        if (embedImages)
+        {
+            gltf::Buffer newBuffer; // only used if embedded images
+
+            imgBufferId = (uint32_t)doc.buffers.size();
+            doc.buffers.push_back(newBuffer);
+            imgBuffer = &doc.buffers[imgBufferId];
+            imgBuffer->name = "embedded_images";
+        }
+
+        for (auto const& texture : textures)
+        {
+            gltf::Material mat;
+            gltf::Texture tex;
+
+            gltf::Image img;
+            std::string source = mapFile.textureRoot + "/" + texture.name;
+
+            if (embedImages)
+            {
+                int bufferViewLen = -1;
+                int x, y, n;
+                unsigned char* loadData = stbi_load(source.c_str(), &x, &y, &n, 0);
+                int offset;
+                if (loadData != nullptr)
+                {
+                    // convert data to png, thus we can support other formats than just png and jpg
+                    // TODO: if the file is already jpg or png, we can just store it directly.
+                    unsigned char* pngData = stbi_write_png_to_mem(loadData, 0, x, y, n, &bufferViewLen);
+
+                    for (int i = 0; i < bufferViewLen; i++)
+                    {
+                        imgBuffer->data.push_back(pngData[i]);
+                    }
+                    offset = imgBuffer->byteLength;
+                    imgBuffer->byteLength += (uint32_t)bufferViewLen * sizeof(char);
+                    free(pngData);
+                    stbi_image_free(loadData);
+                }
+                else
+                {
+                    std::cerr << "ERROR: Image '" << source << "' not found!" << std::endl;
+                    return 1;
+                }
+
+                gltf::BufferView view;
+                view.name = source;
+                view.buffer = imgBufferId;
+                view.byteLength = bufferViewLen;
+                view.byteOffset = offset;
+
+                uint32_t bufferViewId = (uint32_t)doc.bufferViews.size();
+                doc.bufferViews.push_back(view);
+
+                img.bufferView = bufferViewId;
+                img.mimeType = "image/png";
+            }
+            else
+            {
+                img.uri = source;
+            }
+            int32_t const imgId = (int32_t)doc.images.size();
+
+#ifdef _DEBUG
+            int32_t const texId = (int32_t)doc.textures.size();
+            int32_t const matId = (int32_t)doc.materials.size();
+            // Textures and materials in the gltf should be adjacent to the map textures
+            assert(imgId == texture.id && texId == texture.id && matId == texture.id);
+#endif
+
+            tex.source = imgId;
+            tex.name = std::filesystem::path(texture.name).replace_extension("").string();
+            tex.sampler = samplerDefaultId;
+
+            doc.images.push_back(std::move(img));
+            doc.textures.push_back(std::move(tex));
+
+            mat.pbrMetallicRoughness.baseColorTexture = gltf::Material::Texture{.index{(int32_t)texture.id}};
+            mat.name = texture.name;
+            mat.doubleSided = false;
+            doc.materials.push_back(std::move(mat));
+        }
+
+        if (imgBuffer)
+            imgBuffer->SetEmbeddedResource();
 
         doc.scenes.push_back(std::move(scene));
         doc.scene = 0;
