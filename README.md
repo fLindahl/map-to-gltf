@@ -30,4 +30,3 @@ Missing features:
 - No support for WAD files	
 - No support for CSG union between polygons *yet*. It does however merge polygons within a single entity based on their materials.
 - Untested on Linux
-- No support for embedding textures in glb/gltf. Currently only uses external resources.
