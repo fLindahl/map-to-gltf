@@ -190,7 +190,7 @@ int main(int argc, char** argv)
         uint32_t accessorTexOffset = 0;
         uint32_t accessorIndexOffset = 0;
 
-        for (auto const& entity : entities)
+        for (auto& entity : entities)
         {
             gltf::Node node;
             auto nameIt = entity.properties.find("_tb_name");
@@ -291,6 +291,27 @@ int main(int argc, char** argv)
                 node.mesh = meshIndex;
             }
             
+            const std::string originName = "origin";
+            if (entity.properties.contains(originName))
+            {
+                // Special case for origins, since we want to scale it the same as our meshes
+                float output[3];
+                std::string& val = entity.properties.at(originName);
+                std::istringstream ss(val);
+                std::copy(
+                    std::istream_iterator <float>(ss),
+                    std::istream_iterator <float>(),
+                    output
+                );
+                // Flip x axis as well, if we're using RH system
+                // output XZY, since Z is up in Trenchbroom
+                float flip = (-1.0f + (float)mapFile.useLH);
+                std::string scaled = std::to_string((output[0] / scale) * mapFile.meshScale * flip);
+                scaled += " " + std::to_string((output[2] / scale) * mapFile.meshScale);
+                scaled += " " + std::to_string((output[1] / scale) * mapFile.meshScale);
+                val = scaled;
+            }
+
             for (auto const& prop : entity.properties)
             {
                 node.extensionsAndExtras["extras"][prop.first] = prop.second;
