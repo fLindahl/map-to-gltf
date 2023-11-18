@@ -412,6 +412,7 @@ int main(int argc, char** argv)
             doc.textures.push_back(std::move(tex));
 
             mat.pbrMetallicRoughness.baseColorTexture = gltf::Material::Texture{.index{(int32_t)texture.id}};
+            mat.pbrMetallicRoughness.metallicFactor = 0.0f;
             mat.name = texture.name;
             mat.doubleSided = false;
             doc.materials.push_back(std::move(mat));
