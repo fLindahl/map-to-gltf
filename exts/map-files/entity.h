@@ -47,7 +47,7 @@ struct Primitive
 };
 
 // Merges all polygons that share the same texture
-std::vector<Primitive> GeneratePrimitives(std::vector<Poly> polygons);
+std::vector<Primitive> GeneratePrimitives(std::vector<Poly> const& polygons);
 
 
 using PropertyName = std::string;
@@ -56,8 +56,9 @@ using PropertyValue = std::string;
 struct Entity
 {
     std::map<PropertyName, PropertyValue> properties;
-    std::vector<Poly> polys;
+    //std::vector<Poly> polys;
     std::vector<Primitive> primitives;
     Vector3 bboxMin;
     Vector3 bboxMax;
+    bool brushGroup;
 };

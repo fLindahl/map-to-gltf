@@ -31,7 +31,7 @@ private:
     Result GetString();
     Result SkipComments();
 
-    Result ParseEntity(Entity& entity);
+    Result ParseEntity();
     Result ParseProperty(std::pair<PropertyName, PropertyValue>& prop);
     Result ParseBrush(Brush& brush);
     Result ParseFace(Face& face);

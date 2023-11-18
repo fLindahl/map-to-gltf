@@ -29,8 +29,9 @@
 // https://developer.valvesoftware.com/wiki/.map
 // https://quakewiki.org/wiki/Quake_Map_Format
 
-MAPFile::Result MAPFile::ParseEntity(Entity& entity)
+MAPFile::Result MAPFile::ParseEntity()
 {
+	Entity entity;
 	std::vector<Brush> brushes;
 	brushes.reserve(128);
 
@@ -90,25 +91,6 @@ MAPFile::Result MAPFile::ParseEntity(Entity& entity)
 		}
 		else if (c == '}')
 		{ // End of entity
-			if (!brushes.empty())
-			{
-				std::vector<Poly> polygons;
-				if (this->unify)
-				{
-					std::vector<Poly> polygons = CSG::Union(brushes);
-				}
-				else
-				{
-					// Do not perform CSG union
-					for (auto const& brush : brushes)
-					{
-						polygons.insert(polygons.end(), brush.polys.begin(), brush.polys.end());
-						
-					}
-				}
-
-				entity.polys.insert(entity.polys.end(), polygons.begin(), polygons.end());
-			}
 			break;
 		}
 		else
@@ -127,8 +109,41 @@ MAPFile::Result MAPFile::ParseEntity(Entity& entity)
 		return RESULT_FAIL;
 	}
 
-	entity.primitives = GeneratePrimitives(entity.polys);
+	entity.brushGroup = !(entity.properties.contains("classname") && entity.properties["classname"] == "worldspawn");
 
+	if (!brushes.empty())
+	{
+		if (entity.brushGroup)
+		{
+			// anything that is an entity except the worldspawn (standard brushes) will be at least grouped by material.
+			std::vector<Poly> polygons;
+			if (this->unify)
+			{
+				std::vector<Poly> polygons = CSG::Union(brushes);
+			}
+			else
+			{
+				// Do not perform CSG union
+				for (auto const& brush : brushes)
+				{
+					polygons.insert(polygons.end(), brush.polys.begin(), brush.polys.end());
+
+				}
+			}
+			entity.primitives = GeneratePrimitives(polygons);
+		}
+		else
+		{
+			// worldspawn brushes are just exported as individual meshes
+			for (auto const& brush : brushes)
+			{
+				std::vector<Primitive> primitives = GeneratePrimitives(brush.polys);
+				entity.primitives.insert(entity.primitives.end(), primitives.begin(), primitives.end());
+			}
+		}
+	}
+
+	
 	if (this->meshScale != 1.0f)
 	{
 		for (auto& primitive : entity.primitives)
@@ -168,7 +183,26 @@ MAPFile::Result MAPFile::ParseEntity(Entity& entity)
 			}
 			primitive.indexBuffer = std::move(tempIndexBuffer);
 		}
+	}
 
+	// If the entity is not a brush group, we expose it as multiple entities.
+	// This will automatically split it up as separate GLTF nodes and meshes
+	if (!entity.brushGroup)
+	{
+		for (size_t i = 0; i < entity.primitives.size(); i++)
+		{
+			Entity copy;
+			copy.properties = entity.properties;
+			copy.primitives.push_back(entity.primitives[i]);
+			copy.bboxMin = copy.primitives[0].min;
+			copy.bboxMax = copy.primitives[0].max;
+			copy.brushGroup = false;
+			this->mapEntities->push_back(copy);
+		}
+	}
+	else
+	{
+		this->mapEntities->push_back(entity);
 	}
 
 	return RESULT_SUCCEED;
@@ -594,8 +628,7 @@ bool MAPFile::Load(const char* mapFilePath, std::vector<Entity>& entities, std::
 	{
 		SkipComments();
 
-		Entity entity;
-		Result result = ParseEntity(entity);
+		Result result = ParseEntity();
 
 		if (result == RESULT_EOF)
 		{
@@ -606,8 +639,6 @@ bool MAPFile::Load(const char* mapFilePath, std::vector<Entity>& entities, std::
 			fclose(this->file);
 			return false;
 		}
-
-		entities.push_back(std::move(entity));
 	}
 
 	// Clean up and return

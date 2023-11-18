@@ -1,6 +1,6 @@
 #include "map.h"
 
-std::vector<Primitive> GeneratePrimitives(std::vector<Poly> polygons)
+std::vector<Primitive> GeneratePrimitives(std::vector<Poly> const& polygons)
 {
 	//for (size_t i = 0; i < polygons.size(); i++)
 	//{
@@ -35,7 +35,7 @@ std::vector<Primitive> GeneratePrimitives(std::vector<Poly> polygons)
 		{
 			prim = &ret[it->second];
 		}
-
+		
 		uint32_t indexOffset = (uint32_t)prim->positionBuffer.size() / 3;
 		// merge
 		for (size_t i = 0; i < poly.verts.size(); i++)

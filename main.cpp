@@ -190,7 +190,7 @@ int main(int argc, char** argv)
         uint32_t accessorTexOffset = 0;
         uint32_t accessorIndexOffset = 0;
 
-        for (auto& entity : entities)
+        for (Entity& entity : entities)
         {
             gltf::Node node;
             auto nameIt = entity.properties.find("_tb_name");
@@ -209,6 +209,15 @@ int main(int argc, char** argv)
             {
 
                 gltf::Mesh mesh;
+                if (nameIt != entity.properties.end())
+                {
+                    mesh.name = nameIt->second + "_mesh";
+                }
+                else
+                {
+                    static int n = 0;
+                    mesh.name = "_unnamed_mesh_" + std::to_string(n++);
+                }
 
                 for (size_t i = 0; i < entity.primitives.size(); i++)
                 {
