@@ -2,12 +2,6 @@
 
 std::vector<Primitive> GeneratePrimitives(std::vector<Poly> const& polygons)
 {
-	//for (size_t i = 0; i < polygons.size(); i++)
-	//{
-	//	Poly& poly = polygons[i];
-	//	poly.Triangulate();	
-	//}
-
 	std::vector<Primitive> ret;
 
 	// texture id -> ret vector index
@@ -81,4 +75,45 @@ std::vector<Primitive> GeneratePrimitives(std::vector<Poly> const& polygons)
 	}
 
 	return ret;
+}
+
+void ScalePrimitives(std::vector<Primitive>& primitives, float meshScale)
+{
+	for (auto& primitive : primitives)
+	{
+		for (size_t i = 0; i < primitive.positionBuffer.size(); i++)
+		{
+			primitive.positionBuffer[i] *= meshScale;
+		}
+		primitive.max.x *= meshScale;
+		primitive.max.y *= meshScale;
+		primitive.max.z *= meshScale;
+		primitive.min.x *= meshScale;
+		primitive.min.y *= meshScale;
+		primitive.min.z *= meshScale;
+	}
+}
+
+void RecalculateRHPrimitives(std::vector<Primitive>& primitives)
+{
+	for (auto& primitive : primitives)
+	{
+		// Flip x axis
+		for (size_t i = 0; i < primitive.positionBuffer.size(); i += 3)
+		{
+			primitive.positionBuffer[i] *= -1;
+			primitive.normalBuffer[i] *= -1;
+		}
+		primitive.max.x *= -1;
+		primitive.min.x *= -1;
+
+		// Flip triangle winding order by reversing index buffer
+		std::vector<uint32_t> tempIndexBuffer(primitive.indexBuffer.size());
+		size_t const lastIndex = primitive.indexBuffer.size() - 1;
+		for (size_t i = 0; i < primitive.indexBuffer.size(); i++)
+		{
+			tempIndexBuffer[i] = primitive.indexBuffer[lastIndex - i];
+		}
+		primitive.indexBuffer = std::move(tempIndexBuffer);
+	}
 }

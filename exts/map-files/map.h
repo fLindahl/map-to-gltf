@@ -38,6 +38,11 @@ private:
     Result ParseVector(Vector3& v_);
     Result ParsePlane(Plane& p_);
 
+    void GeneratePhysics(Entity& entity, std::vector<Poly> const* const polygons);
+
+    // apply mesh scale and possibly LH->RH conversion
+    Vector3 Export(Vector3 const& vec);
+
     std::vector<Entity>* mapEntities;
     std::vector<Texture>* mapTextures;
     std::unordered_map<std::string, uint32_t> textureTable;
@@ -49,6 +54,7 @@ public:
     std::string textureRoot;
     float meshScale = 1.0f;
     bool useLH = false;
+    bool physics = false;
 
     bool Load(const char* pcFile_, std::vector<Entity>& entities, std::vector<Texture>& textures);
 };

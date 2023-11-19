@@ -25,6 +25,7 @@ void PrintHelp()
         "-scale [float]\t Bake given scale into meshes, Default is 1.0, which makes 64 MAP units to correspond to 1.0f GLTF units (meters).\n"
         "-lh\t Export using left-handed coordinate system instead of GLTFs default right-handed system.\n"
         "-embed\t Embed textures in the output.\n"
+        "-physics\t export OMI physics collider nodes\n"
         "-texroot [folder name]\t Specify a texture root folder relative to cwd (default: \"textures\").\n"
         "\t\t\t Note that your cwd needs to be the same as the output directory.\n"
         "\t\t\t for the gltf to be able to find the correct path.\n\n"
@@ -79,11 +80,14 @@ int main(int argc, char** argv)
     
     // std::cout << "Converting: " << inputFilePath << " to " << outputFilePath << "..." << std::endl;
     
+    bool generatePhysicsNodes = args.get<bool>("physics", false);
+
     MAPFile mapFile;
     mapFile.meshScale = args.get<float>("scale", 1.0f);
     mapFile.useLH = args.get<bool>("lh", false);
     mapFile.unify = args.get<bool>("unify", false);
     mapFile.textureRoot = args.get<std::string>("texroot", "textures");
+    mapFile.physics = generatePhysicsNodes;
 
     bool embedImages = args.get<bool>("embed", false);
 
@@ -98,6 +102,11 @@ int main(int argc, char** argv)
         gltf::Document doc;
         doc.asset.generator = "map-to-gltf by Fredrik Lindahl";
         doc.asset.copyright = args.get<std::string>("copyright", {});
+
+        if (generatePhysicsNodes)
+        {
+            doc.extensionsUsed.push_back("OMI_collider");
+        }
 
         gltf::Scene scene;
         scene.name = "";
@@ -203,6 +212,11 @@ int main(int argc, char** argv)
                 static uint64_t nodeId = 0;
                 node.name = "empty_node_" + std::to_string(nodeId++);
                 std::cout << "WARNING: Empty entity detected!" << std::endl;
+            }
+            else
+            {
+                static uint64_t nodeId = 0;
+                node.name = "unnamed_node_" + std::to_string(nodeId++);
             }
             
             if (entity.primitives.size() > 0)
@@ -326,6 +340,35 @@ int main(int argc, char** argv)
                 node.extensionsAndExtras["extras"][prop.first] = prop.second;
             }
 
+            // Create physics node if necessary
+            if (generatePhysicsNodes && entity.physics.shape != Physics::Shape::None)
+            {
+                gltf::Node physicsNode;
+                physicsNode.name = node.name + "_physics";
+                physicsNode.extensionsAndExtras["extensions"]["OMI_collider"]["type"] = Physics::ShapeName(entity.physics.shape);
+                if (entity.physics.shape == Physics::Shape::AABB)
+                {
+                    Vector3 const size = entity.bboxMax - entity.bboxMin;
+                    physicsNode.extensionsAndExtras["extensions"]["OMI_collider"]["size"] = { size.x, size.y, size.z };
+                    physicsNode.translation = {
+                        (float)entity.physics.center.x,
+                        (float)entity.physics.center.y,
+                        (float)entity.physics.center.z
+                    };
+                }
+                if (entity.physics.shape == Physics::Shape::Hull || 
+                    entity.physics.shape == Physics::Shape::TriMesh)
+                {
+                    physicsNode.extensionsAndExtras["extensions"]["OMI_collider"]["mesh"] = node.mesh;
+                }
+                
+                int32_t const physicsNodeId = (int32_t)doc.nodes.size();
+                doc.nodes.push_back(std::move(physicsNode));
+                scene.nodes.push_back(physicsNodeId);
+                
+                node.children.push_back(physicsNodeId);
+            }
+            
             int32_t const nodeId = (int32_t)doc.nodes.size();
             doc.nodes.push_back(std::move(node));
             scene.nodes.push_back(nodeId);

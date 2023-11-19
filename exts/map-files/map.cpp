@@ -31,9 +31,13 @@
 
 MAPFile::Result MAPFile::ParseEntity()
 {
-	Entity entity;
+	//Entity entity;
 	std::vector<Brush> brushes;
 	brushes.reserve(128);
+	
+	std::map<PropertyName, PropertyValue> properties;
+	bool brushGroup;
+	
 
 	Result result = GetToken();
 
@@ -73,7 +77,7 @@ MAPFile::Result MAPFile::ParseEntity()
 				return RESULT_FAIL;
 			}
 
-			entity.properties.emplace(prop);
+			properties.emplace(prop);
 		}
 		else if (c == '{')
 		{ // Brush
@@ -109,17 +113,33 @@ MAPFile::Result MAPFile::ParseEntity()
 		return RESULT_FAIL;
 	}
 
-	entity.brushGroup = !(entity.properties.contains("classname") && entity.properties["classname"] == "worldspawn");
+	brushGroup = !(properties.contains("classname") && properties["classname"] == "worldspawn");
+
+	auto PostProcessPrimitives = [this](std::vector<Primitive>& primitives)
+	{
+		if (this->meshScale != 1.0f)
+		{
+			ScalePrimitives(primitives, this->meshScale);
+		}
+
+		if (!this->useLH)
+		{
+			RecalculateRHPrimitives(primitives);
+		}
+	};
 
 	if (!brushes.empty())
 	{
-		if (entity.brushGroup)
+		if (brushGroup)
 		{
-			// anything that is an entity except the worldspawn (standard brushes) will be at least grouped by material.
 			std::vector<Poly> polygons;
+			std::vector<Primitive> primitives;
+			Vector3 bboxMin = { 1e30f, 1e30f, 1e30f };
+			Vector3 bboxMax = { -1e30f,-1e30f,-1e30f };
+			// anything that is an entity except the worldspawn (standard brushes) will be at least grouped by material.
 			if (this->unify)
 			{
-				std::vector<Poly> polygons = CSG::Union(brushes);
+				polygons = CSG::Union(brushes);
 			}
 			else
 			{
@@ -127,10 +147,26 @@ MAPFile::Result MAPFile::ParseEntity()
 				for (auto const& brush : brushes)
 				{
 					polygons.insert(polygons.end(), brush.polys.begin(), brush.polys.end());
-
+					bboxMin.Minimize(brush.min);
+					bboxMax.Maximize(brush.max);
 				}
 			}
-			entity.primitives = GeneratePrimitives(polygons);
+			primitives = GeneratePrimitives(polygons);
+
+			PostProcessPrimitives(primitives);
+
+			Entity entity;
+			entity.properties = std::move(properties);
+			entity.primitives = std::move(primitives);
+			entity.bboxMin = bboxMin;
+			entity.bboxMax = bboxMax;
+			entity.brushGroup = true;
+			if (this->physics)
+			{
+				GeneratePhysics(entity, nullptr);
+				entity.physics.center = this->Export((bboxMin + bboxMax) * 0.5f);
+			}
+			this->mapEntities->push_back(entity);
 		}
 		else
 		{
@@ -138,70 +174,28 @@ MAPFile::Result MAPFile::ParseEntity()
 			for (auto const& brush : brushes)
 			{
 				std::vector<Primitive> primitives = GeneratePrimitives(brush.polys);
-				entity.primitives.insert(entity.primitives.end(), primitives.begin(), primitives.end());
-			}
-		}
-	}
+				PostProcessPrimitives(primitives);
 
-	
-	if (this->meshScale != 1.0f)
-	{
-		for (auto& primitive : entity.primitives)
-		{
-			for (size_t i = 0; i < primitive.positionBuffer.size(); i++)
-			{
-				primitive.positionBuffer[i] *= this->meshScale;
+				Entity entity;
+				entity.properties = properties;
+				entity.primitives = std::move(primitives);
+				entity.bboxMin = brush.min;
+				entity.bboxMax = brush.max;
+				if (this->physics)
+				{
+					GeneratePhysics(entity, &brush.polys);
+					entity.physics.center = this->Export((brush.min + brush.max) * 0.5f);
+				}
+				entity.brushGroup = false;
+				this->mapEntities->push_back(entity);
 			}
-			primitive.max.x *= this->meshScale;
-			primitive.max.y *= this->meshScale;
-			primitive.max.z *= this->meshScale;
-			primitive.min.x *= this->meshScale;
-			primitive.min.y *= this->meshScale;
-			primitive.min.z *= this->meshScale;
-		}
-	}
-
-	if (!this->useLH)
-	{
-		for (auto& primitive : entity.primitives)
-		{
-			// Flip x axis
-			for (size_t i = 0; i < primitive.positionBuffer.size(); i += 3)
-			{
-				primitive.positionBuffer[i] *= -1;
-				primitive.normalBuffer[i] *= -1;
-			}
-			primitive.max.x *= -1;
-			primitive.min.x *= -1;
-			
-			// Flip triangle winding order by reversing index buffer
-			std::vector<uint32_t> tempIndexBuffer(primitive.indexBuffer.size());
-			size_t const lastIndex = primitive.indexBuffer.size() - 1;
-			for (size_t i = 0; i < primitive.indexBuffer.size(); i++)
-			{
-				tempIndexBuffer[i] = primitive.indexBuffer[lastIndex - i];
-			}
-			primitive.indexBuffer = std::move(tempIndexBuffer);
-		}
-	}
-
-	// If the entity is not a brush group, we expose it as multiple entities.
-	// This will automatically split it up as separate GLTF nodes and meshes
-	if (!entity.brushGroup)
-	{
-		for (size_t i = 0; i < entity.primitives.size(); i++)
-		{
-			Entity copy;
-			copy.properties = entity.properties;
-			copy.primitives.push_back(entity.primitives[i]);
-			copy.bboxMin = copy.primitives[0].min;
-			copy.bboxMax = copy.primitives[0].max;
-			copy.brushGroup = false;
-			this->mapEntities->push_back(copy);
 		}
 	}
 	else
 	{
+		// empty entity, might be a point entity
+		Entity entity;
+		entity.properties = std::move(properties);
 		this->mapEntities->push_back(entity);
 	}
 
@@ -717,6 +711,58 @@ MAPFile::Result MAPFile::ParsePlane(Plane& p_)
 	return RESULT_SUCCEED;
 }
 
+void MAPFile::GeneratePhysics(Entity& entity, std::vector<Poly> const* const polygons)
+{
+	// TODO: We should support rotated boxes as well
+
+	// Check if the polygons are forming an AABB
+	if (polygons != nullptr && polygons->size() == 6)
+	{
+		Vector3 const axisDirections[3] =
+		{
+			{1,0,0},
+			{0,1,0},
+			{0,0,1}
+		};
+		Vector3 center = {0,0,0};
+		size_t normalPairs = 0; 
+		for (size_t i = 0; i < 6; i++)
+		{
+			Vector3 const& normal = polygons->at(i).plane.n;
+			for (size_t axis = 0; axis < 3; axis++)
+			{
+				double d = normal.Dot(axisDirections[axis]);
+				if (std::abs(d) > 0.99f)
+				{
+					normalPairs++;
+					break;
+				}
+			}
+		}
+		if (normalPairs == 6)
+		{
+			entity.physics.shape = Physics::Shape::AABB;
+			return;
+		}
+	}
+	
+	if (entity.brushGroup)
+	{
+		entity.physics.shape = Physics::Shape::TriMesh;
+	}
+	else
+	{
+		entity.physics.shape = Physics::Shape::Hull;
+	}
+}
+
+Vector3 MAPFile::Export(Vector3 const& vec)
+{
+	float flip = (-1.0f + (float)this->useLH);
+	Vector3 scaled = vec * this->meshScale;
+	scaled.x *= flip;
+	return scaled;
+}
 
 MAPFile::Result MAPFile::ParseVector(Vector3& v_)
 {

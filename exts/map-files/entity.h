@@ -43,22 +43,54 @@ struct Primitive
     std::vector<float> texcoordBuffer; // two floats per UV
     std::vector<uint32_t> indexBuffer;
     uint32_t textureId;
-
 };
+
 
 // Merges all polygons that share the same texture
 std::vector<Primitive> GeneratePrimitives(std::vector<Poly> const& polygons);
-
+// Scales all primitives by a given mesh scale
+void ScalePrimitives(std::vector<Primitive>& primitives, float meshScale);
+// Recalculates all primitives to use RH coordinates instead of the default LH
+void RecalculateRHPrimitives(std::vector<Primitive>& primitives);
 
 using PropertyName = std::string;
 using PropertyValue = std::string;
 
+struct Physics
+{
+    enum class Shape
+    {
+        None = 0,
+        AABB,
+        Hull,
+        TriMesh
+    };
+
+    static const char* const ShapeName(Shape shape)
+    {
+        switch (shape)
+        {
+        case Physics::Shape::AABB:
+            return "box";
+        case Physics::Shape::Hull:
+            return "hull";
+        case Physics::Shape::TriMesh:
+            return "trimesh";
+        default:
+            return "None";
+        }
+    }
+    
+    Shape shape = Shape::None;
+    Vector3 center;
+};
+
 struct Entity
 {
     std::map<PropertyName, PropertyValue> properties;
-    //std::vector<Poly> polys;
     std::vector<Primitive> primitives;
     Vector3 bboxMin;
     Vector3 bboxMax;
     bool brushGroup;
+    Physics physics;
 };
