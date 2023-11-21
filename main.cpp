@@ -336,9 +336,9 @@ int main(int argc, char** argv)
                 // output XZY, since Z is up in Trenchbroom
                 float flip = (-1.0f + (float)mapFile.useLH);
                 float output[3];
-                output[0] = (input[0] / scale) * mapFile.meshScale * flip;
-                output[1] = (input[2] / scale) * mapFile.meshScale;
-                output[2] = (input[1] / scale) * mapFile.meshScale;
+                output[0] = (input[0] / (float)scale) * mapFile.meshScale * flip;
+                output[1] = (input[2] / (float)scale) * mapFile.meshScale;
+                output[2] = (input[1] / (float)scale) * mapFile.meshScale;
 
                 std::string scaled = std::to_string(output[0]);
                 scaled += " " + std::to_string(output[1]);
