@@ -201,6 +201,7 @@ int main(int argc, char** argv)
 
         for (Entity& entity : entities)
         {
+            int32_t const nodeId = (int32_t)doc.nodes.size();
             gltf::Node node;
             auto nameIt = entity.properties.find("_tb_name");
             if (nameIt != entity.properties.end())
@@ -209,14 +210,19 @@ int main(int argc, char** argv)
             }
             else if (entity.properties.size() == 0)
             {
-                static uint64_t nodeId = 0;
-                node.name = "empty_node_" + std::to_string(nodeId++);
+                node.name = "empty_node_" + std::to_string(nodeId);
                 std::cout << "WARNING: Empty entity detected!" << std::endl;
             }
             else
             {
-                static uint64_t nodeId = 0;
-                node.name = "unnamed_node_" + std::to_string(nodeId++);
+                if (entity.properties.contains("classname"))
+                {
+                    node.name = "unnamed_" + entity.properties["classname"] + "_" + std::to_string(nodeId);
+                }
+                else
+                {
+                    node.name = "unnamed_node_" + std::to_string(nodeId);
+                }
             }
             
             if (entity.primitives.size() > 0)
@@ -318,21 +324,29 @@ int main(int argc, char** argv)
             if (entity.properties.contains(originName))
             {
                 // Special case for origins, since we want to scale it the same as our meshes
-                float output[3];
+                float input[3];
                 std::string& val = entity.properties.at(originName);
                 std::istringstream ss(val);
                 std::copy(
                     std::istream_iterator <float>(ss),
                     std::istream_iterator <float>(),
-                    output
+                    input
                 );
                 // Flip x axis as well, if we're using RH system
                 // output XZY, since Z is up in Trenchbroom
                 float flip = (-1.0f + (float)mapFile.useLH);
-                std::string scaled = std::to_string((output[0] / scale) * mapFile.meshScale * flip);
-                scaled += " " + std::to_string((output[2] / scale) * mapFile.meshScale);
-                scaled += " " + std::to_string((output[1] / scale) * mapFile.meshScale);
+                float output[3];
+                output[0] = (input[0] / scale) * mapFile.meshScale * flip;
+                output[1] = (input[2] / scale) * mapFile.meshScale;
+                output[2] = (input[1] / scale) * mapFile.meshScale;
+
+                std::string scaled = std::to_string(output[0]);
+                scaled += " " + std::to_string(output[1]);
+                scaled += " " + std::to_string(output[2]);
                 val = scaled;
+
+                // Write to node translation
+                node.translation = {output[0], output[1], output[2]};
             }
 
             for (auto const& prop : entity.properties)
@@ -369,7 +383,6 @@ int main(int argc, char** argv)
                 node.children.push_back(physicsNodeId);
             }
             
-            int32_t const nodeId = (int32_t)doc.nodes.size();
             doc.nodes.push_back(std::move(node));
             scene.nodes.push_back(nodeId);
         }
