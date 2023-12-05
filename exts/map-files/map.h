@@ -25,7 +25,7 @@ private:
 
     char token[MAX_TOKEN_LENGTH + 1];
 
-    FILE* file;
+    std::ifstream fileStream;
 
     Result GetToken();
     Result GetString();

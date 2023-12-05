@@ -38,7 +38,6 @@ MAPFile::Result MAPFile::ParseEntity()
 	std::map<PropertyName, PropertyValue> properties;
 	bool brushGroup;
 	
-
 	Result result = GetToken();
 
 	if (result != RESULT_SUCCEED)
@@ -50,21 +49,26 @@ MAPFile::Result MAPFile::ParseEntity()
 		return RESULT_FAIL;
 	}
 
+	if (this->mapEntities->size() == 907)
+	{
+		int a = 0;
+	}
+
 	// Parse properties and brushes
 	while (true)
 	{
 		SkipComments();
 
 		char c = 0;
-		c = fgetc(this->file);
+		c = this->fileStream.get();
 		if (c == EOF)
 		{
 			std::cout << "File read error!" << std::endl;
 			return RESULT_FAIL;
 		}
 
-		fseek(this->file, -1, SEEK_CUR);
-
+		this->fileStream.unget();
+		
 		if (c == '"')
 		{ // Property
 			std::pair<PropertyName, PropertyValue> prop;
@@ -359,15 +363,15 @@ MAPFile::Result MAPFile::ParseBrush(Brush& brush)
 	{
 		char c = 0;
 
-		c = fgetc(this->file);
+		c = this->fileStream.get();
 		if (c == EOF)
 		{
 			std::cout << "Error reading brush!" << std::endl;
 			return RESULT_FAIL;
 		}
 
-		fseek(this->file, -1, SEEK_CUR);
-
+		this->fileStream.unget();
+		
 		if (c == '(')
 		{ // Face
 			Face face;
@@ -605,9 +609,9 @@ bool MAPFile::Load(const char* mapFilePath, std::vector<Entity>& entities, std::
 	}
 
 	// Open .MAP file
-	this->file = fopen(mapFilePath, "r");
+	this->fileStream.open(mapFilePath, std::ios::in);
 
-	if (this->file == nullptr)
+	if (!this->fileStream.is_open())
 	{ // Failed to open file
 		return false;
 	}
@@ -630,14 +634,14 @@ bool MAPFile::Load(const char* mapFilePath, std::vector<Entity>& entities, std::
 		}
 		else if (result == RESULT_FAIL)
 		{
-			fclose(this->file);
+			this->fileStream.close();
 			return false;
 		}
 	}
 
 	// Clean up and return
 
-	fclose(this->file);
+	this->fileStream.close();
 
 	this->mapEntities = nullptr;
 	this->mapTextures = nullptr;
@@ -829,17 +833,17 @@ MAPFile::Result MAPFile::GetToken()
 
 	while (i <= MAX_TOKEN_LENGTH)
 	{
-		c = fgetc(this->file);
+		c = this->fileStream.get();
 		if (c == EOF)
 		{
-			if (feof(this->file))
+			if (this->fileStream.eof())
 				return RESULT_EOF;
 			else
 				return RESULT_FAIL;
 		}
 
 		// Check for token end
-		if (c == ' ' || c == '\n' || c == '\r')
+		if (c == ' ' || c == '\n')
 		{
 			break;
 		}
@@ -862,10 +866,10 @@ MAPFile::Result MAPFile::GetString()
 	memset(&this->token, 0, sizeof(this->token));
 
 	// Read first "
-	c = fgetc(this->file);
+	c = this->fileStream.get();
 	if (c == EOF)
 	{
-		if (feof(this->file))
+		if (this->fileStream.eof())
 			return RESULT_EOF;
 		else
 			return RESULT_FAIL;
@@ -874,7 +878,7 @@ MAPFile::Result MAPFile::GetString()
 	// Parse rest of string
 	while (i <= MAX_TOKEN_LENGTH)
 	{
-		c = fgetc(this->file);
+		c = this->fileStream.get();
 		if (c == EOF)
 		{
 			return RESULT_FAIL;
@@ -914,10 +918,10 @@ MAPFile::Result MAPFile::SkipComments()
 	{
 		for (int i = 0; i < 2; i++)
 		{
-			buf[i] = fgetc(this->file);
+			buf[i] = this->fileStream.get();
 			if (buf[i] == EOF)
 			{
-				if (feof(this->file))
+				if (this->fileStream.eof())
 					return RESULT_EOF;
 				else
 					return RESULT_FAIL;
@@ -928,15 +932,15 @@ MAPFile::Result MAPFile::SkipComments()
 		{
 			while (true)
 			{// seek new line
-				char c = fgetc(this->file);
+				char c = this->fileStream.get();
 				if (c == EOF)
 				{
-					if (feof(this->file))
+					if (this->fileStream.eof())
 						return RESULT_EOF;
 					else
 						return RESULT_FAIL;
 				}
-				if (c == '\n' || c == '\r')
+				if (c == '\n')
 				{
 					break;
 				}
@@ -945,9 +949,9 @@ MAPFile::Result MAPFile::SkipComments()
 		}
 		else
 		{
-			// move back 2 characters, since we checked for comments previously and apparently 
-			ungetc(buf[1], this->file);
-			ungetc(buf[0], this->file);
+			// move back 2 characters, since we checked for comments previously
+			this->fileStream.putback(buf[1]);
+			this->fileStream.putback(buf[0]);
 			break;
 		}
 	}
