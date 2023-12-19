@@ -6,6 +6,7 @@
 #include "exts/fx/gltf.h"
 #include "exts/map-files/map.h"
 #include <assert.h>
+#include <variant>
 
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #include "exts/stb/stb_image_write.h"
@@ -42,6 +43,69 @@ void print_what(const std::exception& e) {
         std::cerr << "nested: ";
         print_what(nested);
     }
+}
+
+using JsonVariant = nlohmann::json;//std::variant<float, std::string, std::vector<float>>;
+
+bool useLH;
+float meshScale;
+
+bool AdjustVector3(std::vector<float>& vec)
+{
+    if (vec.size() != 3)
+    {
+        return false;
+    }
+
+    float x = vec[0];
+    float y = vec[1];
+    float z = vec[2];
+
+    // Flip x axis as well, if we're using RH system
+    // output XZY, since Z is up in Trenchbroom
+    float flip = (-1.0f + (float)useLH);
+    vec[0] = (x / (float)scale) * meshScale * flip;
+    vec[1] = (z / (float)scale) * meshScale;
+    vec[2] = (y / (float)scale) * meshScale;
+
+    return true;
+}
+
+JsonVariant ConvertProperty(PropertyName name, PropertyValue prop)
+{
+    JsonVariant ret;
+    std::vector<float> v;
+    std::istringstream ss(prop);
+    std::istream_iterator <float> it(ss);
+    std::istream_iterator <float> eos;
+    while (it != eos)
+    {
+        v.push_back(*it);
+        it++;
+    };
+
+    if (v.empty())
+    {
+        ret = prop;
+    }
+    else if (v.size() == 1)
+    {
+        ret = v[0];
+    }
+    else
+    {
+        // check for special cases
+        if (name == "_color")
+        {
+            // do nothing with it.
+        }
+        else
+        {
+            AdjustVector3(v); // assumes it is a 3D worldspace vector
+        }
+        ret = v;
+    }
+    return ret;
 }
 
 int main(int argc, char** argv)
@@ -83,8 +147,13 @@ int main(int argc, char** argv)
     bool generatePhysicsNodes = args.get<bool>("physics", false);
 
     MAPFile mapFile;
-    mapFile.meshScale = args.get<float>("scale", 1.0f);
-    mapFile.useLH = args.get<bool>("lh", false);
+    
+    meshScale = args.get<float>("scale", 1.0f);
+    mapFile.meshScale = meshScale;
+    
+    useLH = args.get<bool>("lh", false);
+    mapFile.useLH = useLH;
+
     mapFile.unify = args.get<bool>("unify", false);
     mapFile.textureRoot = args.get<std::string>("texroot", "textures");
     mapFile.physics = generatePhysicsNodes;
@@ -324,34 +393,16 @@ int main(int argc, char** argv)
             if (entity.properties.contains(originName))
             {
                 // Special case for origins, since we want to scale it the same as our meshes
-                float input[3];
-                std::string& val = entity.properties.at(originName);
-                std::istringstream ss(val);
-                std::copy(
-                    std::istream_iterator <float>(ss),
-                    std::istream_iterator <float>(),
-                    input
-                );
-                // Flip x axis as well, if we're using RH system
-                // output XZY, since Z is up in Trenchbroom
-                float flip = (-1.0f + (float)mapFile.useLH);
-                float output[3];
-                output[0] = (input[0] / (float)scale) * mapFile.meshScale * flip;
-                output[1] = (input[2] / (float)scale) * mapFile.meshScale;
-                output[2] = (input[1] / (float)scale) * mapFile.meshScale;
-
-                std::string scaled = std::to_string(output[0]);
-                scaled += " " + std::to_string(output[1]);
-                scaled += " " + std::to_string(output[2]);
-                val = scaled;
-
+                std::vector<float> origin = ConvertProperty(originName, entity.properties.at(originName)).get<std::vector<float>>();
+                
                 // Write to node translation
-                node.translation = {output[0], output[1], output[2]};
+                node.translation = {origin[0], origin[1], origin[2]};
             }
 
             for (auto const& prop : entity.properties)
             {
-                node.extensionsAndExtras["extras"][prop.first] = prop.second;
+                JsonVariant var = ConvertProperty(prop.first, prop.second);
+                node.extensionsAndExtras["extras"][prop.first] = var;
             }
 
             // Create physics node if necessary
