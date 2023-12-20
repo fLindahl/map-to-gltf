@@ -137,7 +137,6 @@ MAPFile::Result MAPFile::ParseEntity()
 		if (brushGroup)
 		{
 			std::vector<Poly> polygons;
-			std::vector<Primitive> primitives;
 			Vector3 bboxMin = { 1e30f, 1e30f, 1e30f };
 			Vector3 bboxMax = { -1e30f,-1e30f,-1e30f };
 			// anything that is an entity except the worldspawn (standard brushes) will be at least grouped by material.
@@ -155,16 +154,23 @@ MAPFile::Result MAPFile::ParseEntity()
 					bboxMax.Maximize(brush.max);
 				}
 			}
-			primitives = GeneratePrimitives(polygons);
-
-			PostProcessPrimitives(primitives);
+			
 
 			Entity entity;
 			entity.properties = std::move(properties);
-			entity.primitives = std::move(primitives);
 			entity.bboxMin = bboxMin;
 			entity.bboxMax = bboxMax;
 			entity.brushGroup = true;
+
+			// Calculate an origin that is at bottom of bbox. This is good for the general case.
+			Vector3 origin = (bboxMin + bboxMax) * 0.5;
+			origin.y = bboxMin.y;
+			entity.primitives = GeneratePrimitives(polygons, origin);
+			PostProcessPrimitives(entity.primitives);
+
+			// Don't forget to export the origin, so that we can set it to be the node translation in GLTF
+			entity.origin = this->Export(origin);
+
 			if (this->physics)
 			{
 				GeneratePhysics(entity, nullptr);

@@ -47,7 +47,7 @@ struct Primitive
 
 
 // Merges all polygons that share the same texture
-std::vector<Primitive> GeneratePrimitives(std::vector<Poly> const& polygons);
+std::vector<Primitive> GeneratePrimitives(std::vector<Poly> const& polygons, Vector3 origin = Vector3(0,0,0));
 // Scales all primitives by a given mesh scale
 void ScalePrimitives(std::vector<Primitive>& primitives, float meshScale);
 // Recalculates all primitives to use RH coordinates instead of the default LH
@@ -91,6 +91,7 @@ struct Entity
     std::vector<Primitive> primitives;
     Vector3 bboxMin;
     Vector3 bboxMax;
+    Vector3 origin;
     bool brushGroup;
     Physics physics;
 };

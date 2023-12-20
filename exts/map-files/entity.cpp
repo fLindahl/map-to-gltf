@@ -1,6 +1,6 @@
 #include "map.h"
 
-std::vector<Primitive> GeneratePrimitives(std::vector<Poly> const& polygons)
+std::vector<Primitive> GeneratePrimitives(std::vector<Poly> const& polygons, Vector3 origin)
 {
 	std::vector<Primitive> ret;
 
@@ -35,9 +35,9 @@ std::vector<Primitive> GeneratePrimitives(std::vector<Poly> const& polygons)
 		for (size_t i = 0; i < poly.verts.size(); i++)
 		{
 			// NOTE: currently assuming vertices are in triangle list order, without indexbuffer
-			prim->positionBuffer.push_back((float)poly.verts[i].p.x);
-			prim->positionBuffer.push_back((float)poly.verts[i].p.y);
-			prim->positionBuffer.push_back((float)poly.verts[i].p.z);
+			prim->positionBuffer.push_back((float)poly.verts[i].p.x - (float)origin.x);
+			prim->positionBuffer.push_back((float)poly.verts[i].p.y - (float)origin.y);
+			prim->positionBuffer.push_back((float)poly.verts[i].p.z - (float)origin.z);
 			prim->normalBuffer.push_back((float)poly.plane.n.x);
 			prim->normalBuffer.push_back((float)poly.plane.n.y);
 			prim->normalBuffer.push_back((float)poly.plane.n.z);

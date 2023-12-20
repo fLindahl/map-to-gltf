@@ -271,7 +271,10 @@ int main(int argc, char** argv)
         for (Entity& entity : entities)
         {
             int32_t const nodeId = (int32_t)doc.nodes.size();
-            gltf::Node node;
+            doc.nodes.push_back(gltf::Node());
+            gltf::Node& node = doc.nodes.back();
+            scene.nodes.push_back(nodeId);
+
             auto nameIt = entity.properties.find("_tb_name");
             if (nameIt != entity.properties.end())
             {
@@ -398,6 +401,10 @@ int main(int argc, char** argv)
                 // Write to node translation
                 node.translation = {origin[0], origin[1], origin[2]};
             }
+            else
+            {
+                node.translation = {(float)entity.origin.x, (float)entity.origin.y, (float)entity.origin.z};
+            }
 
             for (auto const& prop : entity.properties)
             {
@@ -432,10 +439,7 @@ int main(int argc, char** argv)
                 scene.nodes.push_back(physicsNodeId);
                 
                 node.children.push_back(physicsNodeId);
-            }
-            
-            doc.nodes.push_back(std::move(node));
-            scene.nodes.push_back(nodeId);
+            }   
         }
 
         int32_t samplerDefaultId = 0;
