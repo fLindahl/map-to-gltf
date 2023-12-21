@@ -95,7 +95,7 @@ JsonVariant ConvertProperty(PropertyName name, PropertyValue prop)
     else
     {
         // check for special cases
-        if (name == "_color")
+        if (name == "_color" || name == "angles")
         {
             // do nothing with it.
         }
@@ -275,6 +275,8 @@ int main(int argc, char** argv)
             gltf::Node& node = doc.nodes.back();
             scene.nodes.push_back(nodeId);
 
+            bool const isPointEntity = (entity.primitives.size() == 0);
+
             auto nameIt = entity.properties.find("_tb_name");
             if (nameIt != entity.properties.end())
             {
@@ -297,7 +299,7 @@ int main(int argc, char** argv)
                 }
             }
             
-            if (entity.primitives.size() > 0)
+            if (!isPointEntity)
             {
 
                 gltf::Mesh mesh;
@@ -395,15 +397,28 @@ int main(int argc, char** argv)
             const std::string originName = "origin";
             if (entity.properties.contains(originName))
             {
-                // Special case for origins, since we want to scale it the same as our meshes
                 std::vector<float> origin = ConvertProperty(originName, entity.properties.at(originName)).get<std::vector<float>>();
-                
-                // Write to node translation
                 node.translation = {origin[0], origin[1], origin[2]};
             }
             else
             {
                 node.translation = {(float)entity.origin.x, (float)entity.origin.y, (float)entity.origin.z};
+            }
+
+            if (isPointEntity)
+            {
+                const std::string anglesName = "angles";
+                if (entity.properties.contains(anglesName))
+                {
+                    std::vector<float> angles = ConvertProperty(anglesName, entity.properties.at(anglesName)).get<std::vector<float>>();
+                    node.rotation = QuatFromEuler(angles[0], angles[1] + 90.0f, angles[2]);
+                }
+                else
+                {
+                    // default rotation is 90deg around y axis, since "X is forward" is default for the MAP format.
+                    constexpr std::array<float, 4> rot = { 0, 0.7071068f, 0, 0.7071068f };
+                    node.rotation = rot;
+                }
             }
 
             for (auto const& prop : entity.properties)

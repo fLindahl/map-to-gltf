@@ -2,6 +2,7 @@
 
 #include <iostream>
 #include <cmath>
+#include <array>
 
 ////////////////////////////////////////////////////////////////////
 // Constants
@@ -251,3 +252,35 @@ public:
 		return true;
 	}
 };
+
+////////////////////////////////////////////////////////////////////
+// Functions
+////////////////////////////////////////////////////////////////////
+
+inline constexpr float
+deg2rad(float d) noexcept
+{
+	constexpr double pi = 3.1415926535897932384626433832795028841971693993751;
+	return (float)((d * pi) / 180.0f);
+}
+
+inline std::array<float, 4> QuatFromEuler(float x, float y, float z) noexcept
+{
+	x = deg2rad(x);
+	y = deg2rad(y);
+	z = deg2rad(z);
+
+	const float cx = cos(x * 0.5f);
+	const float sx = sin(x * 0.5f);
+	const float cy = cos(y * 0.5f);
+	const float sy = sin(y * 0.5f);
+	const float cz = cos(z * 0.5f);
+	const float sz = sin(z * 0.5f);
+
+	return {
+		  sx * cy * cz - cx * sy * sz
+		, cx * sy * cz + sx * cy * sz
+		, cx * cy * sz - sx * sy * cz
+		, cx * cy * cz + sx * sy * sz
+	};
+}
