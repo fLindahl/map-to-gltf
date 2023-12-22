@@ -1,6 +1,10 @@
 #include "map.h"
 
-void Brush::CalculateAABB()
+//------------------------------------------------------------------------------
+/**
+*/
+void
+Brush::CalculateAABB()
 {
     min = { 1e30f, 1e30f, 1e30f};
     max = {-1e30f,-1e30f,-1e30f };
@@ -12,7 +16,11 @@ void Brush::CalculateAABB()
     }
 }
 
-std::vector<Poly> CSG::Union(std::vector<Brush> const& brushes)
+//------------------------------------------------------------------------------
+/**
+*/
+std::vector<Poly>
+CSG::Union(std::vector<Brush> const& brushes)
 {
     // TODO: Currently not implemented
     abort(); 

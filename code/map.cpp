@@ -29,7 +29,11 @@
 // https://developer.valvesoftware.com/wiki/.map
 // https://quakewiki.org/wiki/Quake_Map_Format
 
-MAPFile::Result MAPFile::ParseEntity()
+//------------------------------------------------------------------------------
+/**
+*/
+MAPFile::Result
+MAPFile::ParseEntity()
 {
 	//Entity entity;
 	std::vector<Brush> brushes;
@@ -212,8 +216,11 @@ MAPFile::Result MAPFile::ParseEntity()
 	return RESULT_SUCCEED;
 }
 
-
-MAPFile::Result MAPFile::ParseFace(Face& face)
+//------------------------------------------------------------------------------
+/**
+*/
+MAPFile::Result
+MAPFile::ParseFace(Face& face)
 {
 	// Read plane definition
 	Result result;
@@ -344,8 +351,11 @@ MAPFile::Result MAPFile::ParseFace(Face& face)
 	return RESULT_SUCCEED;
 }
 
-
-MAPFile::Result MAPFile::ParseBrush(Brush& brush)
+//------------------------------------------------------------------------------
+/**
+*/
+MAPFile::Result
+MAPFile::ParseBrush(Brush& brush)
 {
 	// Read {
 	Result result = GetToken();
@@ -444,8 +454,11 @@ MAPFile::Result MAPFile::ParseBrush(Brush& brush)
 	return RESULT_SUCCEED;
 }
 
-
-MAPFile::Result MAPFile::ParseProperty(std::pair<PropertyName, PropertyValue>& prop)
+//------------------------------------------------------------------------------
+/**
+*/
+MAPFile::Result
+MAPFile::ParseProperty(std::pair<PropertyName, PropertyValue>& prop)
 {
 	// Read name
 	Result result = GetString();
@@ -605,8 +618,11 @@ MAPFile::Result MAPFile::ParseProperty(std::pair<PropertyName, PropertyValue>& p
 	return RESULT_SUCCEED;
 }
 
-
-bool MAPFile::Load(const char* mapFilePath, std::vector<Entity>& entities, std::vector<Texture>& textures)
+//------------------------------------------------------------------------------
+/**
+*/
+bool
+MAPFile::Load(const char* mapFilePath, std::vector<Entity>& entities, std::vector<Texture>& textures)
 {
 	// Check if parameters are valid
 	if (mapFilePath == NULL)
@@ -655,8 +671,11 @@ bool MAPFile::Load(const char* mapFilePath, std::vector<Entity>& entities, std::
 	return true;
 }
 
-
-MAPFile::Result MAPFile::ParsePlane(Plane& p_)
+//------------------------------------------------------------------------------
+/**
+*/
+MAPFile::Result
+MAPFile::ParsePlane(Plane& p_)
 {
 	Result result = GetToken();
 
@@ -721,7 +740,11 @@ MAPFile::Result MAPFile::ParsePlane(Plane& p_)
 	return RESULT_SUCCEED;
 }
 
-void MAPFile::GeneratePhysics(Entity& entity, std::vector<Poly> const* const polygons)
+//------------------------------------------------------------------------------
+/**
+*/
+void
+MAPFile::GeneratePhysics(Entity& entity, std::vector<Poly> const* const polygons)
 {
 	// TODO: We should support rotated boxes as well
 
@@ -766,7 +789,11 @@ void MAPFile::GeneratePhysics(Entity& entity, std::vector<Poly> const* const pol
 	}
 }
 
-Vector3 MAPFile::Export(Vector3 const& vec)
+//------------------------------------------------------------------------------
+/**
+*/
+Vector3
+MAPFile::Export(Vector3 const& vec)
 {
 	float flip = (-1.0f + (float)this->useLH);
 	Vector3 scaled = vec * this->meshScale;
@@ -774,7 +801,11 @@ Vector3 MAPFile::Export(Vector3 const& vec)
 	return scaled;
 }
 
-MAPFile::Result MAPFile::ParseVector(Vector3& v_)
+//------------------------------------------------------------------------------
+/**
+*/
+MAPFile::Result
+MAPFile::ParseVector(Vector3& v_)
 {
 	Result result = GetToken();
 
@@ -830,8 +861,11 @@ MAPFile::Result MAPFile::ParseVector(Vector3& v_)
 	return RESULT_SUCCEED;
 }
 
-
-MAPFile::Result MAPFile::GetToken()
+//------------------------------------------------------------------------------
+/**
+*/
+MAPFile::Result
+MAPFile::GetToken()
 {
 	unsigned int i = 0;
 	char c = 0;
@@ -862,8 +896,11 @@ MAPFile::Result MAPFile::GetToken()
 	return RESULT_SUCCEED;
 }
 
-
-MAPFile::Result MAPFile::GetString()
+//------------------------------------------------------------------------------
+/**
+*/
+MAPFile::Result
+MAPFile::GetString()
 {
 	unsigned int i = 0;
 	char c = 0;
@@ -917,7 +954,11 @@ MAPFile::Result MAPFile::GetString()
 	return RESULT_SUCCEED;
 }
 
-MAPFile::Result MAPFile::SkipComments()
+//------------------------------------------------------------------------------
+/**
+*/
+MAPFile::Result
+MAPFile::SkipComments()
 {
 	char buf[2];
 	while (true)

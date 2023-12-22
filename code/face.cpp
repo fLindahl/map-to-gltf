@@ -1,6 +1,10 @@
 #include "map.h"
 
-std::vector<Poly> DerivePolys(std::vector<Face> const& faces)
+//------------------------------------------------------------------------------
+/**
+*/
+std::vector<Poly>
+DerivePolys(std::vector<Face> const& faces)
 {
 	std::vector<Poly> ret;
 
