@@ -12,21 +12,23 @@ ENDIF()
 
 SET(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/bin)
 
-SET(files_map_to_gltf 
-	flags.h
-	main.cpp
+SET(files_code
+	code/main.cpp
+	code/mapconverter.h
+	code/mapconverter.cpp
+	code/brush.cpp
+	code/brush.h
+	code/entity.cpp
+	code/entity.h
+	code/face.cpp
+	code/map.cpp
+	code/map.h
+	code/math.h
+	code/poly.cpp
 )
 
-SET(files_exts_map_files
-	exts/map-files/brush.cpp
-	exts/map-files/brush.h
-	exts/map-files/entity.cpp
-	exts/map-files/entity.h
-	exts/map-files/face.cpp
-	exts/map-files/map.cpp
-	exts/map-files/map.h
-	exts/map-files/math.h
-	exts/map-files/poly.cpp
+SET(files_exts
+	exts/flags.h
 )
 
 SET(files_exts_fx
@@ -39,12 +41,14 @@ SET(files_exts_stb
 	exts/stb/stb_image_write.h
 )
 
-SOURCE_GROUP("mtg" FILES ${files_map_to_gltf})
-SOURCE_GROUP("map-files" FILES ${files_exts_map_files})
+SOURCE_GROUP("mtg" FILES ${files_code})
+SOURCE_GROUP("exts" FILES ${files_exts})
 SOURCE_GROUP("fx" FILES ${files_exts_fx})
 SOURCE_GROUP("stb" FILES ${files_exts_stb})
 
-ADD_EXECUTABLE(mtg ${files_map_to_gltf} ${files_exts_map_files} ${files_exts_fx} ${files_exts_stb})
+ADD_EXECUTABLE(mtg ${files_code} ${files_exts} ${files_exts_fx} ${files_exts_stb})
+
+TARGET_INCLUDE_DIRECTORIES(mtg PRIVATE .)
 
 IF(WIN32)
 	IF(MSVC)

@@ -21,7 +21,7 @@
 #define STBI_NO_PIC
 #define STBI_NO_PNM
 #define STB_IMAGE_IMPLEMENTATION
-#include "../stb/stbimage.h"
+#include "exts/stb/stbimage.h"
 
 #include "map.h"
 
