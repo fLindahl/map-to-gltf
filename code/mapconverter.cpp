@@ -333,7 +333,7 @@ MapConverter::SetupProperties(fx::gltf::Document& doc, std::vector<Entity> const
             if (entity.properties.contains(anglesName))
             {
                 std::vector<float> angles = ConvertProperty(anglesName, entity.properties.at(anglesName), meshScale, useLH).get<std::vector<float>>();
-                node.rotation = QuatFromEuler(angles[0], angles[1] + 90.0f, angles[2]);
+                node.rotation = QuatFromEuler(angles[2], angles[1] + 90.0f, angles[0]);
             }
             else
             {
