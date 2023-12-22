@@ -4,7 +4,9 @@ CLI tool for converting Valve format .map files to .gltf/glb
 
 ## How to use
 
-Run `$ mtg -h` or check [here](https://github.com/fLindahl/map-to-gltf/blob/01745cf5a7f1741f1c53ec82a09d2cad9b67624b/code/main.cpp#L14) for instructions.
+Run `$ mtg -h` or check [here](https://github.com/fLindahl/map-to-gltf/blob/main/code/main.cpp#L14) for instructions.
+
+There's also some [docs](https://github.com/fLindahl/map-to-gltf/blob/main/docs).
 
 ## Build prerequisities
 
