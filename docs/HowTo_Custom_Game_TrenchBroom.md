@@ -4,7 +4,7 @@
 
 2. Modify the `GameConfig.cfg` of you custom game to:
     * Only allow `Quake3 (Valve)` format
-    * Set `[PATH]` in `"filesystem": { "searchpath": [PATH] }` to be the assets directory of your project. This is the direcotry where your `textures` folder is located.
+    * Set `[PATH]` in `"filesystem": { "searchpath": [PATH] }` to be the assets directory of your project. This is the directory where your `textures` folder is located.
     * Set `[NAME]` in `"textures": { "type": "directory", "root": [NAME] }` to be your `textures` folder name. Note that this is just the _name_ of the folder, not a relative or absolut path.
 
 3. Add a compile profile in Trenchbroom.
