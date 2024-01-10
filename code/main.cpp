@@ -60,7 +60,7 @@ main(int argc, char** argv)
     bool produceGlb         = args.get("glb", false);
     bool generatePhysics    = args.get<bool>("physics", false);
     bool filter             = args.get<bool>("filter", false);
-    bool embedImages        = args.get<bool>("filter", false);
+    bool embedImages        = args.get<bool>("embed", false);
     float meshScale         = args.get<float>("scale", 1.0f);
     bool useLH              = args.get<bool>("lh", false);
 
