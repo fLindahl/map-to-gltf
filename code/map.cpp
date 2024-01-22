@@ -13,6 +13,7 @@
 #include <fstream>
 #include <cmath>
 #include <filesystem>
+#include <algorithm>
 
 #define STBI_NO_PSD
 #define STBI_NO_TGA
