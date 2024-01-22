@@ -8,7 +8,6 @@ const unsigned int MAX_TEXTURE_LENGTH = 16;
 #include <vector>
 #include <unordered_map>
 #include <cstdint>
-#include <algorithm>
 
 #include "math.h"
 #include "entity.h"
