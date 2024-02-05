@@ -372,6 +372,13 @@ MapConverter::GeneratePhysicsNodes(fx::gltf::Document& doc, std::vector<Entity> 
         Entity const& entity = entities.at(nodeId);
         gltf::Node& node = doc.nodes[nodeId];
 
+        if (entity.properties.find("classname") != entity.properties.end() &&
+            entity.properties.at("classname") == "brush_detail")
+        {
+            // brush details doesn't have colliders
+            continue;
+        }
+
         // Create physics node if necessary
         if (entity.physics.shape != Physics::Shape::None)
         {
