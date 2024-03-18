@@ -266,7 +266,7 @@ MAPFile::ParseFace(Face& face)
 	{
 		// Try to find texture in any of the texture folders
 		
-		const char* supportedExts[3] = { ".png", ".jpg", ".bmp" };
+		const char* supportedExts[6] = { ".png", ".jpg", ".bmp", ".PNG", ".JPG", ".BMP" };
 
 		for (size_t i = 0; i < sizeof(supportedExts) / sizeof(const char*); i++)
 		{
