@@ -158,7 +158,7 @@ MapConverter::CreateMeshes(
     {
         std::filesystem::path binaryOutput = outputFilePath;
         binaryOutput.replace_extension(".bin");
-        meshBuffer.uri = binaryOutput.string();
+        meshBuffer.uri = binaryOutput.filename().string();
     }
     uint8_t* buffer = meshBuffer.data.data();
 
